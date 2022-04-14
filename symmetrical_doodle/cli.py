@@ -669,10 +669,3 @@ def parse_args(args=None):
         **kwargs
     )
     return options
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    import dataclasses
-    import pprint
-    pprint.pprint(dataclasses.asdict(args), sort_dicts=False)
