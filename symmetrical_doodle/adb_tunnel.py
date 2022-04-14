@@ -3,14 +3,14 @@ import asyncio.subprocess
 import dataclasses
 from typing import Optional
 
-import adblib
+import symmetrical_doodle.adb
 
 DEVICE_SOCKET_NAME = 'scrcpy'
 
 
 @dataclasses.dataclass
 class Tunnel:
-    adb: adblib.ADB
+    adb: symmetrical_doodle.adb.ADB
 
     forward: bool = dataclasses.field(init=False)
     server: Optional[asyncio.Server] = dataclasses.field(

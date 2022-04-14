@@ -3,10 +3,10 @@ import dataclasses
 import pathlib
 from typing import Optional
 
-import adb_tunnel
-import adblib
-import coords
-import options
+import symmetrical_doodle.adb
+import symmetrical_doodle.adb_tunnel
+import symmetrical_doodle.coords
+import symmetrical_doodle.options
 
 DEVICE_SERVER_PATH = '/data/local/tmp/scrcpy-server.jar'
 
@@ -16,7 +16,7 @@ DEVICE_NAME_FIELD_LENGTH = 64
 @dataclasses.dataclass
 class ServerInfo:
     device_name: bytes
-    frame_size: coords.Size
+    frame_size: symmetrical_doodle.coords.Size
 
 
 async def read_device_info(
@@ -32,15 +32,17 @@ async def read_device_info(
              8) | data[DEVICE_NAME_FIELD_LENGTH + 1]
     height = (data[DEVICE_NAME_FIELD_LENGTH + 2] <<
               8) | data[DEVICE_NAME_FIELD_LENGTH + 3]
-    return ServerInfo(device_name, coords.Size(width, height))
+    return ServerInfo(
+        device_name, symmetrical_doodle.coords.Size(width, height)
+    )
 
 
 @dataclasses.dataclass
 class ServerParams:
-    log_level: options.LogLevel
-    crop: str
-    codec_options: str
-    encoder_name: str
+    log_level: symmetrical_doodle.options.LogLevel
+    crop: Optional[str]
+    codec_options: Optional[str]
+    encoder_name: Optional[str]
     max_size: int
     bit_rate: int
     max_fps: int
@@ -64,11 +66,11 @@ class ServerParams:
 class Server:
     params: ServerParams
 
-    adb: adblib.ADB
+    adb: symmetrical_doodle.adb.ADB
 
     info: ServerInfo = dataclasses.field(init=False)
 
-    tunnel: adb_tunnel.Tunnel
+    tunnel: symmetrical_doodle.adb_tunnel.Tunnel
 
     video_connection: tuple[asyncio.StreamReader,
                             asyncio.StreamWriter] = dataclasses.field(
@@ -95,15 +97,16 @@ class Server:
             command.append(f'max_size={self.params.max_size}')
         if self.params.max_fps:
             command.append(f'max_fps={self.params.max_fps}')
-        if self.params.lock_video_orientation != options.LockVideoOrientation.UNLOCKED:
+        if self.params.lock_video_orientation != symmetrical_doodle.options.LockVideoOrientation.UNLOCKED:
             command.append(
                 f'lock_video_orientation={self.params.lock_video_orientation}'
             )
         if self.tunnel.forward:
             command.append('tunnel_forward=true')
-        if self.params.crop:
+        if self.params.crop is not None:
             command.append(f'crop={self.params.crop}')
         if not self.params.control:
+            # By default, control is true
             command.append('control=false')
         if self.params.display_id:
             command.append(f'display_id={self.params.display_id}')
@@ -111,17 +114,20 @@ class Server:
             command.append('show_touches=true')
         if self.params.stay_awake:
             command.append('stay_awake=true')
-        if self.params.codec_options:
+        if self.params.codec_options is not None:
             command.append(f'codec_options={self.params.codec_options}')
-        if self.params.encoder_name:
+        if self.params.encoder_name is not None:
             command.append(f'encoder_name={self.params.encoder_name}')
         if self.params.power_off_on_close:
             command.append('power_off_on_close=true')
         if not self.params.clipboard_autosync:
+            # By default, clipboard_autosync is true
             command.append('clipboard_autosync=false')
         if not self.params.downsize_on_error:
+            # By default, downsize_on_error is true
             command.append('downsize_on_error=false')
         if not self.params.cleanup:
+            # By default, cleanup is true
             command.append('cleanup=false')
 
         return self.adb.run_command(command)
@@ -148,6 +154,9 @@ class Server:
         self.info = await read_device_info(self.video_connection)
 
     async def run(self):
+        # Execute "adb start-server" before "adb devices" so that daemon
+        # starting output/errors is correctly printed in the console
+        # ("adb devices" output is parsed, so it is not output)
         process = await self.adb.start_server()
         assert not await process.wait()
 

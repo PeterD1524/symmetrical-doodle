@@ -1,12 +1,11 @@
 import dataclasses
 import enum
-from typing import Optional
 
-import android.input
-import android.keycodes
-import util.buffer_util
-import util.str
-import coords
+import symmetrical_doodle.android.input
+import symmetrical_doodle.android.keycodes
+import symmetrical_doodle.coords
+import symmetrical_doodle.utils.buffer
+import symmetrical_doodle.utils.str
 
 CONTROL_MSG_MAX_SIZE = 1 << 18
 
@@ -34,8 +33,8 @@ class ControlMessageType(enum.Enum):
 
 class ScreenPowerMode(enum.Enum):
     # see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
-    SC_SCREEN_POWER_MODE_OFF = 0
-    SC_SCREEN_POWER_MODE_NORMAL = 2
+    OFF = 0
+    NORMAL = 2
 
 
 class CopyKey(enum.Enum):
@@ -44,16 +43,24 @@ class CopyKey(enum.Enum):
     CUT = enum.auto()
 
 
-def write_position(buf: bytearray, position: coords.Position):
-    util.buffer_util.write32be(buf, position.point.x)
-    util.buffer_util.write32be(buf, position.point.y)
-    util.buffer_util.write16be(buf, position.screen_size.width)
-    util.buffer_util.write16be(buf, position.screen_size.height)
+def write_position(
+    buf: bytearray, position: symmetrical_doodle.coords.Position
+):
+    symmetrical_doodle.utils.buffer.write32be(buf, position.point.x)
+    symmetrical_doodle.utils.buffer.write32be(buf, position.point.y)
+    symmetrical_doodle.utils.buffer.write16be(
+        buf, position.screen_size.width
+    )
+    symmetrical_doodle.utils.buffer.write16be(
+        buf, position.screen_size.height
+    )
 
 
 def write_string(buf: bytearray, utf8: bytes, max_len: int):
-    length = util.str.str_utf8_truncation_index(utf8, max_len)
-    util.buffer_util.write32be(buf, length)
+    length = symmetrical_doodle.utils.str.str_utf8_truncation_index(
+        utf8, max_len
+    )
+    symmetrical_doodle.utils.buffer.write32be(buf, length)
     buf.extend(utf8[:length])
 
 
@@ -79,17 +86,17 @@ class ControlMessage:
 @dataclasses.dataclass
 class InjectKeycode(ControlMessage):
     type = ControlMessageType.INJECT_KEYCODE
-    action: android.input.KeyEventAction
-    keycode: android.keycodes.Keycode
+    action: symmetrical_doodle.android.input.KeyEventAction
+    keycode: symmetrical_doodle.android.keycodes.Keycode
     repeat: int
-    meta_state: android.input.MetaState
+    meta_state: int
 
     def serialize(self):
         buf = self.get_buf()
         buf.append(self.action.value)
-        util.buffer_util.write32be(buf, self.keycode.value)
-        util.buffer_util.write32be(buf, self.repeat)
-        util.buffer_util.write32be(buf, self.meta_state.value)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.keycode.value)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.repeat)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.meta_state)
         return buf
 
 
@@ -107,44 +114,44 @@ class InjectText(ControlMessage):
 @dataclasses.dataclass
 class InjectTouchEvent(ControlMessage):
     type = ControlMessageType.INJECT_TOUCH_EVENT
-    action: android.input.MotionEventAction
+    action: symmetrical_doodle.android.input.MotionEventAction
     buttons: int
     pointer_id: int
-    position: coords.Position
+    position: symmetrical_doodle.coords.Position
     pressure: float
 
     def serialize(self):
         buf = self.get_buf()
         buf.append(self.action.value)
-        util.buffer_util.write64be(buf, self.pointer_id)
+        symmetrical_doodle.utils.buffer.write64be(buf, self.pointer_id)
         write_position(buf, self.position)
         pressure = to_fixed_point_16(self.pressure)
-        util.buffer_util.write16be(buf, pressure)
-        util.buffer_util.write32be(buf, self.buttons)
+        symmetrical_doodle.utils.buffer.write16be(buf, pressure)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.buttons)
         return buf
 
 
 @dataclasses.dataclass
 class InjectScrollEvent(ControlMessage):
     type = ControlMessageType.INJECT_SCROLL_EVENT
-    position: coords.Position
+    position: symmetrical_doodle.coords.Position
     hscroll: int
     vscroll: int
-    button: android.input.MotionEventButton
+    buttons: int
 
     def serialize(self):
         buf = self.get_buf()
         write_position(buf, self.position)
-        util.buffer_util.write32be(buf, self.hscroll)
-        util.buffer_util.write32be(buf, self.vscroll)
-        util.buffer_util.write32be(buf, self.button.value)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.hscroll)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.vscroll)
+        symmetrical_doodle.utils.buffer.write32be(buf, self.buttons)
         return buf
 
 
 @dataclasses.dataclass
 class BackOrScreenOn(ControlMessage):
     type = ControlMessageType.BACK_OR_SCREEN_ON
-    action: android.input.KeyEventAction
+    action: symmetrical_doodle.android.input.KeyEventAction
 
     def serialize(self):
         buf = self.get_buf()
@@ -172,7 +179,7 @@ class SetClipboard(ControlMessage):
 
     def serialize(self):
         buf = self.get_buf()
-        util.buffer_util.write64be(buf, self.sequence)
+        symmetrical_doodle.utils.buffer.write64be(buf, self.sequence)
         buf.append(self.paste)
         write_string(buf, self.text, CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
         return buf

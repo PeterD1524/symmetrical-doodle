@@ -1,23 +1,29 @@
 import asyncio
 import dataclasses
 
-import control_message
+import symmetrical_doodle.control_message
 
 
 @dataclasses.dataclass
 class Controller:
     control_connection: tuple[asyncio.StreamReader, asyncio.StreamWriter]
     queue: asyncio.Queue[
-        control_message.ControlMessage
+        symmetrical_doodle.control_message.ControlMessage
     ] = dataclasses.field(default_factory=asyncio.Queue, init=False)
 
-    async def push_message(self, message: control_message.ControlMessage):
+    async def push_message(
+        self, message: symmetrical_doodle.control_message.ControlMessage
+    ):
         await self.queue.put(message)
 
-    def push_message_nowait(self, message: control_message.ControlMessage):
+    def push_message_nowait(
+        self, message: symmetrical_doodle.control_message.ControlMessage
+    ):
         self.queue.put_nowait(message)
 
-    async def process_message(self, message: control_message.ControlMessage):
+    async def process_message(
+        self, message: symmetrical_doodle.control_message.ControlMessage
+    ):
         # print('[controller]', message)
         serialized_message = message.serialize()
         _, writer = self.control_connection

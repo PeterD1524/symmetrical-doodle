@@ -1,7 +1,7 @@
 import asyncio
 import dataclasses
 
-import device_message
+import symmetrical_doodle.device_message
 
 
 @dataclasses.dataclass
@@ -14,9 +14,12 @@ class Receiver:
         buf = b''
 
         while True:
-            assert len(buf) < device_message.DEVICE_MSG_MAX_SIZE
+            assert len(
+                buf
+            ) < symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE
             data = await reader.read(
-                device_message.DEVICE_MSG_MAX_SIZE - len(buf)
+                symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE -
+                len(buf)
             )
             if not data:
                 break
@@ -24,7 +27,7 @@ class Receiver:
             buf += data
             try:
                 consumed = self.process_messages(buf, 0)
-            except device_message.NotRecoverable:
+            except symmetrical_doodle.device_message.NotRecoverable:
                 break
 
             buf = buf[consumed:]
@@ -32,8 +35,10 @@ class Receiver:
     def process_messages(self, buf: bytes, start: int):
         while True:
             try:
-                message, start = device_message.deserialize(buf, start)
-            except device_message.NotAvailable:
+                message, start = symmetrical_doodle.device_message.deserialize(
+                    buf, start
+                )
+            except symmetrical_doodle.device_message.NotAvailable:
                 return start
 
             self.process_message(message)
@@ -41,6 +46,8 @@ class Receiver:
             if start == len(buf):
                 return start
 
-    def process_message(self, message: device_message.DeviceMessage):
+    def process_message(
+        self, message: symmetrical_doodle.device_message.DeviceMessage
+    ):
         print('[receiver]', message)
         pass
