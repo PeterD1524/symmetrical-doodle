@@ -569,9 +569,11 @@ def parse_args(args=None):
     display = not args.no_display
     record_filename = args.record
     v4l2_device = args.v4l2_sink
-    assert not (
-        not display and record_filename is None and v4l2_device is None
-    )
+    # -N/--no-display requires either screen recording (-r/--record) or sink to
+    # v4l2loopback device (--v4l2-sink)
+    # assert not (
+    #     not display and record_filename is None and v4l2_device is None
+    # )
 
     downsize_on_error = not args.no_downsize_on_error
     if v4l2_device is not None:
