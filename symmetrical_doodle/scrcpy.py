@@ -42,23 +42,18 @@ async def prepare_adb(
         # At most one of the 3 following parameters may be set
         assert sum([serial is not None, select_usb, select_tcpip]) <= 1
 
-        transports = await adb.list_connected_devices()
         if serial is not None:
-            s = serial.encode()
-            transports = [t for t in transports if t.serial == s]
-            assert len(transports) == 1
+            adb.serial = serial
         elif select_usb:
             adb.use_usb_device(True)
-            serial = (await adb.get_serialno()).decode()
         elif select_tcpip:
             adb.use_tcpip_device(True)
-            serial = (await adb.get_serialno()).decode()
         else:
             adb.use_usb_device(False)
             adb.use_tcpip_device(False)
             del adb.serial
             del adb.transport_id
-            serial = (await adb.get_serialno()).decode()
+        serial = (await adb.get_serialno()).decode()
 
         if tcpip:
             assert tcpip_dst is None
@@ -82,6 +77,7 @@ async def prepare_adb(
 
 async def scrcpy(
     server_path: str,
+    display: bool = True,
     # for prepare_adb
     serial: Optional[str] = None,
     tcpip: bool = False,
@@ -112,7 +108,7 @@ async def scrcpy(
     cleanup: bool = True,
     device_server_path: str = symmetrical_doodle.servers.DEVICE_SERVER_PATH,
     version: str = symmetrical_doodle.config.SCRCPY_VERSION,
-    device_socket_name: str = symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME,
+    device_socket_name: str = symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME
 ):
     params = symmetrical_doodle.servers.ServerParams(
         log_level=log_level,
@@ -153,11 +149,14 @@ async def scrcpy(
 
     server_process = await server.run()
 
+    aws = []
+
     if control:
         controller = symmetrical_doodle.controllers.Controller(
             server.control_connection
         )
         controller_task = asyncio.create_task(controller.run())
+        aws.append(controller_task)
 
         if turn_screen_off:
             await symmetrical_doodle.utils.turn_screen_off(controller)
@@ -166,22 +165,21 @@ async def scrcpy(
 
     decoder = symmetrical_doodle.decoders.Decoder()
 
-    screen = symmetrical_doodle.screens.cv2_screens.CV2Screen(
-        server.info.device_name.decode()
-    )
+    if display:
+        screen = symmetrical_doodle.screens.cv2_screens.CV2Screen(
+            server.info.device_name.decode()
+        )
 
-    decoder.sinks.append(screen.frame_sink)
-    screen_task = asyncio.create_task(screen.run())
+        decoder.sinks.append(screen.frame_sink)
+        screen_task = asyncio.create_task(screen.run())
+        aws.append(screen_task)
 
     decoder_task = asyncio.create_task(decoder.run())
     demuxer.sinks.append(decoder.packet_sink)
 
     demuxer_task = asyncio.create_task(demuxer.run())
 
-    aws = [
-        controller_task, screen_task, decoder_task, demuxer_task,
-        server_process.wait()
-    ]
+    aws.extend([decoder_task, demuxer_task, server_process.wait()])
 
     await asyncio.gather(*aws)
 
@@ -195,6 +193,7 @@ async def main():
 
     await scrcpy(
         options.server_path,
+        display=options.display,
         serial=options.serial,
         tcpip=options.tcpip,
         tcpip_dst=options.tcpip_dst,
