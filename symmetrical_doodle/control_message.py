@@ -48,12 +48,8 @@ def write_position(
 ):
     symmetrical_doodle.utils.buffer.write32be(buf, position.point.x)
     symmetrical_doodle.utils.buffer.write32be(buf, position.point.y)
-    symmetrical_doodle.utils.buffer.write16be(
-        buf, position.screen_size.width
-    )
-    symmetrical_doodle.utils.buffer.write16be(
-        buf, position.screen_size.height
-    )
+    symmetrical_doodle.utils.buffer.write16be(buf, position.screen_size.width)
+    symmetrical_doodle.utils.buffer.write16be(buf, position.screen_size.height)
 
 
 def write_string(buf: bytearray, utf8: bytes, max_len: int):
@@ -65,7 +61,7 @@ def write_string(buf: bytearray, utf8: bytes, max_len: int):
 
 
 def to_fixed_point_16(f: float):
-    assert f >= 0.0 and f <= 1.0
+    assert 0.0 <= f <= 1.0
     u = int(f * 65536.0)
     if u >= 0xffff:
         u = 0xffff
