@@ -7,10 +7,69 @@ import symmetrical_doodle.adb
 import symmetrical_doodle.adb_tunnel
 import symmetrical_doodle.coords
 import symmetrical_doodle.options
+import symmetrical_doodle.config
 
 DEVICE_SERVER_PATH = '/data/local/tmp/scrcpy-server.jar'
 
 DEVICE_NAME_FIELD_LENGTH = 64
+
+
+def create_server_params(
+    server_path: str,
+    crop: Optional[str] = None,
+    codec_options: Optional[str] = None,
+    encoder_name: Optional[str] = None,
+    log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.
+    options.LogLevel.INFO,
+    max_size: int = 0,
+    bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE,
+    max_fps: int = 0,
+    lock_video_orientation: symmetrical_doodle.options.
+    LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.
+    UNLOCKED,
+    display_id: int = 0,
+    show_touches: bool = False,
+    control: bool = True,
+    stay_awake: bool = False,
+    force_adb_forward: bool = False,
+    power_off_on_close: bool = False,
+    clipboard_autosync: bool = True,
+    downsize_on_error: bool = True,
+    cleanup: bool = True,
+    device_server_path: str = DEVICE_SERVER_PATH,
+    version: str = symmetrical_doodle.config.SCRCPY_VERSION
+):
+    return ServerParams(
+        log_level=log_level,
+        crop=crop,
+        codec_options=codec_options,
+        encoder_name=encoder_name,
+        max_size=max_size,
+        bit_rate=bit_rate,
+        max_fps=max_fps,
+        lock_video_orientation=lock_video_orientation,
+        control=control,
+        display_id=display_id,
+        show_touches=show_touches,
+        stay_awake=stay_awake,
+        force_adb_forward=force_adb_forward,
+        power_off_on_close=power_off_on_close,
+        clipboard_autosync=clipboard_autosync,
+        downsize_on_error=downsize_on_error,
+        cleanup=cleanup,
+        server_path=pathlib.Path(server_path),
+        device_server_path=device_server_path,
+        version=version,
+    )
+
+
+def create_default_server(server_path: str):
+    adb = symmetrical_doodle.adb.ADB()
+    tunnel = symmetrical_doodle.adb_tunnel.Tunnel(
+        adb, symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME
+    )
+    params = create_server_params(server_path)
+    return Server(params, adb, tunnel)
 
 
 @dataclasses.dataclass
@@ -154,6 +213,11 @@ class Server:
         self.info = await read_device_info(self.video_connection)
 
     async def run(self):
+        """Runs the server and connects to the server.
+
+        Returns:
+            The server process.
+        """
         # Execute "adb start-server" before "adb devices" so that daemon
         # starting output/errors is correctly printed in the console
         # ("adb devices" output is parsed, so it is not output)
