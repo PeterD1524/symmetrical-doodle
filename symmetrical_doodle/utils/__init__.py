@@ -51,7 +51,7 @@ async def send_tap(
     await controller.send_message(message)
 
 
-async def send_swipe_bad(
+async def send_swipe(
     controller: symmetrical_doodle.controllers.Controller,
     screen_size: symmetrical_doodle.coords.Size,
     x1: int,
