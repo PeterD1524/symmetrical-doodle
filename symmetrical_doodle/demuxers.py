@@ -26,11 +26,6 @@ class Demuxer:
     async def run(self):
         while True:
             packet = await self.receive_packet()
-
-            # print(
-            #     f'{packet.pts=} {packet.dts=} {packet.flags=} {len(packet.input)=}'
-            # )
-
             await self.push_packet(packet)
 
     async def receive_packet(self):
@@ -41,9 +36,7 @@ class Demuxer:
         pts_flags, start = symmetrical_doodle.utils.buffer.read64be(
             header, start
         )
-        length, start = symmetrical_doodle.utils.buffer.read32be(
-            header, start
-        )
+        length, start = symmetrical_doodle.utils.buffer.read32be(header, start)
         assert length
 
         data = await reader.readexactly(length)

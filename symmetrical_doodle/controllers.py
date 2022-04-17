@@ -29,7 +29,6 @@ class Controller:
     async def send_message(
         self, message: symmetrical_doodle.control_message.ControlMessage
     ):
-        print('[controller]', message)
         serialized_message = message.serialize()
         _, writer = self.control_connection
         writer.write(serialized_message)

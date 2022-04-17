@@ -49,5 +49,4 @@ class Receiver:
     def process_message(
         self, message: symmetrical_doodle.device_message.DeviceMessage
     ):
-        print('[receiver]', message)
         pass
