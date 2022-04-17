@@ -1,5 +1,7 @@
 import asyncio
+import asyncio.subprocess
 import pathlib
+import threading
 from typing import Optional
 
 import symmetrical_doodle.adb
@@ -13,13 +15,26 @@ import symmetrical_doodle.coords
 import symmetrical_doodle.decoders
 import symmetrical_doodle.demuxers
 import symmetrical_doodle.options
-import symmetrical_doodle.screens.cv2_screens
 import symmetrical_doodle.servers
 import symmetrical_doodle.utils
 
 
+def get_pyside_screens():
+    import symmetrical_doodle.screens.pyside_screens
+    return symmetrical_doodle.screens.pyside_screens
+
+
 async def configure_tcpip_unknown_address(adb: symmetrical_doodle.adb.ADB):
     raise NotImplementedError
+
+
+async def wait_and_cancel_all(event: asyncio.Event):
+    await event.wait()
+    current_task = asyncio.current_task()
+    for task in asyncio.all_tasks():
+        if task == current_task:
+            continue
+        task.cancel()
 
 
 async def prepare_adb(
@@ -84,6 +99,8 @@ async def scrcpy(
     tcpip_dst: Optional[str] = None,
     select_usb: bool = False,
     select_tcpip: bool = False,
+    # for screen
+    window_title: Optional[str] = None,
     # for ServerParams
     crop: Optional[str] = None,
     codec_options: Optional[str] = None,
@@ -110,6 +127,11 @@ async def scrcpy(
     version: str = symmetrical_doodle.config.SCRCPY_VERSION,
     device_socket_name: str = symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME
 ):
+    if display:
+        pyside_screens = get_pyside_screens()
+    else:
+        pyside_screens = None
+
     params = symmetrical_doodle.servers.ServerParams(
         log_level=log_level,
         crop=crop,
@@ -130,7 +152,7 @@ async def scrcpy(
         cleanup=cleanup,
         server_path=pathlib.Path(server_path),
         device_server_path=device_server_path,
-        version=version,
+        version=version
     )
 
     adb = symmetrical_doodle.adb.ADB()
@@ -147,58 +169,128 @@ async def scrcpy(
 
     server = symmetrical_doodle.servers.Server(params, adb, tunnel)
 
-    server_process = await server.run()
+    loop = asyncio.new_event_loop()
 
-    aws = []
+    if display:
+        assert pyside_screens is not None
+        thread = pyside_screens.Thread(loop.run_forever)
+    else:
+        thread = threading.Thread(target=loop.run_forever)
+    thread.start()
+
+    server_process = asyncio.run_coroutine_threadsafe(server.run(),
+                                                      loop).result()
+
+    coros = []
 
     if control:
         controller = symmetrical_doodle.controllers.Controller(
             server.control_connection
         )
-        controller_task = asyncio.create_task(controller.run())
-        aws.append(controller_task)
-
         if turn_screen_off:
-            await symmetrical_doodle.utils.turn_screen_off(controller)
+            asyncio.run_coroutine_threadsafe(
+                symmetrical_doodle.utils.turn_screen_off(controller), loop
+            )
+
+        control_coro = controller.run()
+        coros.append(control_coro)
 
     demuxer = symmetrical_doodle.demuxers.Demuxer(server.video_connection)
 
     decoder = symmetrical_doodle.decoders.Decoder()
 
-    if display:
-        screen = symmetrical_doodle.screens.cv2_screens.CV2Screen(
-            server.info.device_name.decode()
-        )
-
-        decoder.sinks.append(screen.frame_sink)
-        screen_task = asyncio.create_task(screen.run())
-        aws.append(screen_task)
-
-    decoder_task = asyncio.create_task(decoder.run())
+    decoder_coro = decoder.run()
     demuxer.sinks.append(decoder.packet_sink)
 
-    demuxer_task = asyncio.create_task(demuxer.run())
+    demuxer_coro = demuxer.run()
 
-    aws.extend([decoder_task, demuxer_task, server_process.wait()])
+    coros.extend([decoder_coro, demuxer_coro])
 
-    await asyncio.gather(*aws)
+    if display:
+        assert pyside_screens is not None
+        assert isinstance(thread, pyside_screens.Thread)
+
+        if window_title is None:
+            try:
+                window_title = server.info.device_name.decode()
+            except UnicodeDecodeError:
+                pass
+
+        app = pyside_screens.App(
+            thread,
+            size=(server.info.frame_size.width, server.info.frame_size.height),
+            window_title=window_title
+        )
+
+        decoder.sinks.append(app.screen.frame_receiver.frame_sink)
+        screen_frame_receiver_coro = app.screen.frame_receiver.run()
+        coros.append(screen_frame_receiver_coro)
+
+        futures = [
+            asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros
+        ]
+
+        r = app.run()
+    else:
+
+        futures = [
+            asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros
+        ]
+
+    # cancel all tasks
+    event = asyncio.Event()
+    event_coro = wait_and_cancel_all(event)
+    event_future = asyncio.run_coroutine_threadsafe(event_coro, loop)
+    loop.call_soon_threadsafe(event.set)
+    event_future.result()
+
+    clean_up(loop, server, server_process)
+
+    loop.call_soon_threadsafe(loop.stop)
+
+    if isinstance(thread, threading.Thread):
+        thread.join()
+    else:
+        thread.wait()
+
+
+def clean_up(
+    loop: asyncio.AbstractEventLoop, server: symmetrical_doodle.servers.Server,
+    server_process: asyncio.subprocess.Process
+):
+
+    async def close_writer(writer: asyncio.StreamWriter):
+        writer.close()
+        await writer.wait_closed()
+
+    if server.control_connection is not None:
+        asyncio.run_coroutine_threadsafe(
+            close_writer(server.control_connection[1]), loop
+        ).result()
+
+    asyncio.run_coroutine_threadsafe(
+        close_writer(server.video_connection[1]), loop
+    ).result()
+
+    asyncio.run_coroutine_threadsafe(server_process.wait(), loop).result()
 
 
 async def main():
-    # print(
-    #     f'scrcpy {symmetrical_doodle.config.SCRCPY_VERSION} <https://github.com/Genymobile/scrcpy>'
-    # )
 
     options = symmetrical_doodle.cli.parse_args()
 
     await scrcpy(
         options.server_path,
+        #
         display=options.display,
         serial=options.serial,
         tcpip=options.tcpip,
         tcpip_dst=options.tcpip_dst,
         select_usb=options.select_usb,
         select_tcpip=options.select_tcpip,
+        #
+        window_title=options.window_title,
+        #
         crop=options.crop,
         codec_options=options.codec_options,
         encoder_name=options.encoder_name,
