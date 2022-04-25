@@ -1,5 +1,6 @@
 import asyncio
 import asyncio.subprocess
+import logging
 import pathlib
 import threading
 from typing import Optional
@@ -17,6 +18,12 @@ import symmetrical_doodle.demuxers
 import symmetrical_doodle.options
 import symmetrical_doodle.servers
 import symmetrical_doodle.utils
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 def get_pyside_screens():
@@ -260,19 +267,37 @@ def clean_up(
 ):
 
     async def close_writer(writer: asyncio.StreamWriter):
+        writer.write_eof()
         writer.close()
         await writer.wait_closed()
+
+    asyncio.run_coroutine_threadsafe(
+        close_writer(server.video_connection[1]), loop
+    ).result()
 
     if server.control_connection is not None:
         asyncio.run_coroutine_threadsafe(
             close_writer(server.control_connection[1]), loop
         ).result()
 
-    asyncio.run_coroutine_threadsafe(
-        close_writer(server.video_connection[1]), loop
-    ).result()
+    # Give some delay for the server to terminate properly
+    WATCHDOG_DELAY = 1
 
-    asyncio.run_coroutine_threadsafe(server_process.wait(), loop).result()
+    async def wait_for(
+        process: asyncio.subprocess.Process, timeout: Optional[float]
+    ):
+        try:
+            await asyncio.wait_for(process.wait(), timeout)
+        except asyncio.TimeoutError:
+            # After this delay, kill the server if it's not dead already.
+            # On some devices, closing the sockets is not sufficient to wake up
+            # the blocking calls while the device is asleep.
+            logger.warning('Killing the server...')
+            process.kill()
+
+    asyncio.run_coroutine_threadsafe(
+        wait_for(server_process, WATCHDOG_DELAY), loop
+    ).result()
 
 
 async def main():
