@@ -218,12 +218,6 @@ class Server:
         Returns:
             The server process.
         """
-        # Execute "adb start-server" before "adb devices" so that daemon
-        # starting output/errors is correctly printed in the console
-        # ("adb devices" output is parsed, so it is not output)
-        process = await self.adb.start_server()
-        assert not await process.wait()
-
         await self.push()
 
         await self.tunnel.open(force_forward=self.params.force_adb_forward)
