@@ -271,7 +271,7 @@ class ADB(SimpleADB):
         return adb_query_command_remove_trailing_newline(stdout)
 
     def forward(self, local: str, remote: str, stdout=None):
-        self.run_command(['forward', local, remote], stdout=stdout)
+        return self.run_command(['forward', local, remote], stdout=stdout)
 
     def forward_remove(self, local: str):
         return self.run_command(['forward', '--remove', local])
