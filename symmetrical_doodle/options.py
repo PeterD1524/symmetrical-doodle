@@ -134,7 +134,6 @@ class Options:
     power_off_on_close: bool = False
     clipboard_autosync: bool = True
     downsize_on_error: bool = True
-    tcpip: bool = False
     tcpip_dst: Optional[str] = None
     select_usb: bool = False
     select_tcpip: bool = False

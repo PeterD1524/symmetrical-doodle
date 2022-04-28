@@ -59,7 +59,7 @@ def create_server_params(
         cleanup=cleanup,
         server_path=pathlib.Path(server_path),
         device_server_path=device_server_path,
-        version=version,
+        version=version
     )
 
 

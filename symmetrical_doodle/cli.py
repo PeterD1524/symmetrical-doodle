@@ -376,10 +376,7 @@ def get_parser():
     )
     parser.add_argument(
         '--tcpip',
-        nargs='?',
-        default=argparse.SUPPRESS,
-        help=
-        'Configure and reconnect the device over TCP/IP. If a destination address is provided, then scrcpy connects to this address before starting. The device must listen on the given TCP port (default is 5555). If no destination address is provided, then scrcpy attempts to find the IP address of the current device (typically connected over USB), enables TCP/IP mode, then connects to this address before starting.',
+        help='Configure and reconnect the device over TCP/IP.',
         metavar='ip[:port]'
     )
     parser.add_argument(
@@ -547,13 +544,7 @@ def parse_args(args=None):
     assert 0 <= display_buffer <= 0x7fffffff
     display_buffer *= 1000
 
-    try:
-        tcpip_dst = args.tcpip
-    except AttributeError:
-        tcpip = False
-        tcpip_dst = None
-    else:
-        tcpip = True
+    tcpip_dst = args.tcpip
 
     v4l2_buffer = args.v4l2_buffer
     assert 0 <= v4l2_buffer <= 0x7fffffff
@@ -661,7 +652,6 @@ def parse_args(args=None):
         power_off_on_close=power_off_on_close,
         display_buffer=display_buffer,
         clipboard_autosync=not args.no_clipboard_autosync,
-        tcpip=tcpip,
         tcpip_dst=tcpip_dst,
         downsize_on_error=downsize_on_error,
         cleanup=not args.no_cleanup,

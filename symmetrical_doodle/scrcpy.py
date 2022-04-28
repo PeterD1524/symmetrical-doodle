@@ -31,10 +31,6 @@ def get_pyside_screens():
     return symmetrical_doodle.screens.pyside_screens
 
 
-async def configure_tcpip_unknown_address(adb: symmetrical_doodle.adb.ADB):
-    raise NotImplementedError
-
-
 async def wait_and_cancel_all(event: asyncio.Event):
     await event.wait()
     current_task = asyncio.current_task()
@@ -44,65 +40,11 @@ async def wait_and_cancel_all(event: asyncio.Event):
         task.cancel()
 
 
-async def prepare_adb(
-    adb: symmetrical_doodle.adb.ADB, serial: Optional[str], tcpip: bool,
-    tcpip_dst: Optional[str], select_usb: bool, select_tcpip: bool
-):
-    # tcpip_dst implies tcpip
-    assert not (tcpip_dst is not None and not tcpip)
-
-    # If tcpip_dst parameter is given, then it must connect to this address.
-    # Therefore, the device is unknown, so serial is meaningless at this point.
-    assert not (serial is not None and tcpip_dst is not None)
-
-    # A device must be selected via a serial in all cases except when --tcpip=
-    # is called with a parameter (in that case, the device may initially not
-    # exist, and scrcpy will execute "adb connect").
-    need_initial_serial = tcpip_dst is None
-
-    if need_initial_serial:
-        # At most one of the 3 following parameters may be set
-        assert sum([serial is not None, select_usb, select_tcpip]) <= 1
-
-        if serial is not None:
-            adb.serial = serial
-        elif select_usb:
-            adb.use_usb_device(True)
-        elif select_tcpip:
-            adb.use_tcpip_device(True)
-        else:
-            adb.use_usb_device(False)
-            adb.use_tcpip_device(False)
-            del adb.serial
-            del adb.transport_id
-        serial = (await adb.get_serialno()).decode()
-
-        if tcpip:
-            assert tcpip_dst is None
-            adb.serial = serial
-            await configure_tcpip_unknown_address(adb)
-    else:
-        host, sep, port = tcpip_dst.partition(':')
-        if sep:
-            port = int(port)
-        else:
-            port = None
-        try:
-            await adb.disconnect(host, port)
-        except symmetrical_doodle.adb.Error:
-            pass
-        result = await adb.connect(host, port)
-        assert result.startswith(b'connected to ')
-
-    adb.serial = serial
-
-
 async def scrcpy(
     server_path: str,
     display: bool = True,
     # for prepare_adb
     serial: Optional[str] = None,
-    tcpip: bool = False,
     tcpip_dst: Optional[str] = None,
     select_usb: bool = False,
     select_tcpip: bool = False,
@@ -163,10 +105,9 @@ async def scrcpy(
     )
 
     adb = symmetrical_doodle.adb.ADB()
-    await prepare_adb(
+    await symmetrical_doodle.adb.utils.prepare_adb(
         adb,
         serial=serial,
-        tcpip=tcpip,
         tcpip_dst=tcpip_dst,
         select_usb=select_usb,
         select_tcpip=select_tcpip
@@ -309,7 +250,6 @@ async def main():
         #
         display=options.display,
         serial=options.serial,
-        tcpip=options.tcpip,
         tcpip_dst=options.tcpip_dst,
         select_usb=options.select_usb,
         select_tcpip=options.select_tcpip,
