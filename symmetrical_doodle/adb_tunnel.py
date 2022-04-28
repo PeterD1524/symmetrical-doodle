@@ -12,16 +12,16 @@ DEVICE_SOCKET_NAME = 'scrcpy'
 class Tunnel:
     adb: symmetrical_doodle.adb.ADB
 
-    forward: bool = dataclasses.field(init=False)
+    forward: Optional[bool] = dataclasses.field(default=None, init=False)
     server: Optional[asyncio.Server] = dataclasses.field(
-        init=False
+        default=None, init=False
     )  # only used if not forward
     connections: asyncio.Queue[tuple[asyncio.StreamReader,
                                      asyncio.StreamWriter]
                                ] = dataclasses.field(
                                    default_factory=asyncio.Queue, init=False
                                )  # only used if not forward
-    local_port: int = dataclasses.field(init=False)
+    local_port: Optional[int] = dataclasses.field(default=None, init=False)
     device_socket_name: str
 
     async def open(self, force_forward: bool = False):

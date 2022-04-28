@@ -127,17 +127,16 @@ class Server:
 
     adb: symmetrical_doodle.adb.ADB
 
-    info: ServerInfo = dataclasses.field(init=False)
+    info: Optional[ServerInfo] = dataclasses.field(default=None, init=False)
 
     tunnel: symmetrical_doodle.adb_tunnel.Tunnel
 
-    video_connection: tuple[asyncio.StreamReader,
-                            asyncio.StreamWriter] = dataclasses.field(
-                                init=False
-                            )
-    control_connection: Optional[tuple[asyncio.StreamReader,
-                                       asyncio.StreamWriter]
-                                 ] = dataclasses.field(init=False)
+    video_connection: Optional[tuple[asyncio.StreamReader,
+                                     asyncio.StreamWriter]
+                               ] = dataclasses.field(default=None, init=False)
+    control_connection: Optional[tuple[
+        asyncio.StreamReader,
+        asyncio.StreamWriter]] = dataclasses.field(default=None, init=False)
 
     def execute(self):
         command = [

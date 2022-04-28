@@ -14,10 +14,10 @@ class Decoder:
     sinks: list[asyncio.Queue[av.VideoFrame]
                 ] = dataclasses.field(default_factory=list, init=False)
 
-    codec_context: av.CodecContext = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        self.codec_context = av.CodecContext.create('h264', 'r')
+    codec_context: av.CodecContext = dataclasses.field(
+        default_factory=lambda: av.CodecContext.create('h264', 'r'),
+        init=False
+    )
 
     async def push(self, packet: symmetrical_doodle.packets.Packet):
         is_config = packet.pts is None
