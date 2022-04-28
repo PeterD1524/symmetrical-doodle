@@ -95,8 +95,7 @@ class Options:
     record_format: RecordFormat = RecordFormat.AUTO
     keyboard_input_mode: KeyboardInputMode = KeyboardInputMode.INJECT
     mouse_input_mode: MouseInputMode = MouseInputMode.INJECT
-    port_range: tuple[int,
-                      int] = symmetrical_doodle.config.DEFAULT_LOCAL_PORT_RANGE
+    port: Optional[int] = None
     tunnel_host: Optional[str] = None
     tunnel_port: int = 0
     shortcut_mods: ShortcutMods = dataclasses.field(

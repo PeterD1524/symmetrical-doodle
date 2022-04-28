@@ -283,11 +283,10 @@ def get_parser():
     parser.add_argument(
         '-p',
         '--port',
-        default=
-        f'{options_default.port_range[0]}:{options_default.port_range[1]}',
+        type=int,
         help=
         'Set the TCP port (range) used by the client to listen. Default is %(default)s.',
-        metavar='port[:port]'
+        metavar='port'
     )
     parser.add_argument(
         '--power-off-on-close',
@@ -512,8 +511,6 @@ def parse_args(args=None):
         args.lock_video_orientation
     )
 
-    port_range = parse_port_range(args.port)
-
     log_level = parse_log_level(args.verbosity)
 
     window_x = parse_window_position(args.window_x)
@@ -623,7 +620,7 @@ def parse_args(args=None):
         tunnel_port=tunnel_port,
         control=control,
         display=display,
-        port_range=port_range,
+        port=args.port,
         record_filename=record_filename,
         serial=serial,
         turn_screen_off=turn_screen_off,

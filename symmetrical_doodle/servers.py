@@ -19,6 +19,7 @@ def create_server_params(
     crop: Optional[str] = None,
     codec_options: Optional[str] = None,
     encoder_name: Optional[str] = None,
+    port: Optional[int] = None,
     log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.
     options.LogLevel.INFO,
     max_size: int = 0,
@@ -44,6 +45,7 @@ def create_server_params(
         crop=crop,
         codec_options=codec_options,
         encoder_name=encoder_name,
+        port=port,
         max_size=max_size,
         bit_rate=bit_rate,
         max_fps=max_fps,
@@ -102,6 +104,7 @@ class ServerParams:
     crop: Optional[str]
     codec_options: Optional[str]
     encoder_name: Optional[str]
+    port: Optional[int]
     max_size: int
     bit_rate: int
     max_fps: int
@@ -219,7 +222,9 @@ class Server:
         """
         await self.push()
 
-        await self.tunnel.open(force_forward=self.params.force_adb_forward)
+        await self.tunnel.open(
+            port=self.params.port, force_forward=self.params.force_adb_forward
+        )
 
         process = await self.execute()
 

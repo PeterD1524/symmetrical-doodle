@@ -56,6 +56,7 @@ async def scrcpy(
     encoder_name: Optional[str] = None,
     log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.
     options.LogLevel.INFO,
+    port: Optional[int] = None,
     max_size: int = 0,
     bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE,
     max_fps: int = 0,
@@ -86,6 +87,7 @@ async def scrcpy(
         crop=crop,
         codec_options=codec_options,
         encoder_name=encoder_name,
+        port=port,
         max_size=max_size,
         bit_rate=bit_rate,
         max_fps=max_fps,
@@ -260,6 +262,7 @@ async def main():
         codec_options=options.codec_options,
         encoder_name=options.encoder_name,
         log_level=options.log_level,
+        port=options.port,
         max_size=options.max_size,
         bit_rate=options.bit_rate,
         max_fps=options.max_fps,

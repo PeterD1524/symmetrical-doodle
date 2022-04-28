@@ -24,27 +24,32 @@ class Tunnel:
     local_port: Optional[int] = dataclasses.field(default=None, init=False)
     device_socket_name: str
 
-    async def open(self, force_forward: bool = False):
+    async def open(
+        self, port: Optional[int] = None, force_forward: bool = False
+    ):
         if not force_forward:
             try:
-                await self.enable_reverse_any_port()
+                await self.enable_reverse(port)
             except Exception:
                 raise
             else:
                 return
-        await self.enable_forward_any_port()
+        await self.enable_forward(port)
 
-    async def enable_forward_any_port(self):
+    async def enable_forward(self, port: Optional[int] = None):
+        if port is None:
+            port = 0
+
         remote = f'localabstract:{self.device_socket_name}'
         process = await self.adb.forward(
-            'tcp:0', remote, stdout=asyncio.subprocess.PIPE
+            f'tcp:{port}', remote, stdout=asyncio.subprocess.PIPE
         )
         stdout_data, _ = await process.communicate()
         assert not process.returncode
         self.local_port = int(stdout_data)
         self.forward = True
 
-    async def enable_reverse_any_port(self):
+    async def enable_reverse(self, port: Optional[int] = None):
 
         async def append_connection(
             reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -52,8 +57,7 @@ class Tunnel:
             await self.connections.put((reader, writer))
 
         self.server = await asyncio.start_server(
-            append_connection,
-            host='127.0.0.1',
+            append_connection, host='127.0.0.1', port=port
         )
         self.local_port = self.server.sockets[0].getsockname()[1]
 
@@ -85,5 +89,6 @@ class Tunnel:
                 _, writer = connections.get_nowait()
             except asyncio.QueueEmpty:
                 break
+            writer.write_eof()
             writer.close()
             await writer.wait_closed()
