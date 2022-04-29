@@ -6,13 +6,28 @@ from typing import Optional
 
 
 def get_executable():
-    return shutil.which('adb')
+    path = shutil.which('adb')
+    assert path is not None
+    return path
+
+
+@dataclasses.dataclass
+class CompletedProcess:
+    returncode: int
+    program: str
+    args: list[str]
+    stdout: Optional[bytes]
+    stderr: Optional[bytes]
+    pid: int
 
 
 @dataclasses.dataclass
 class SimpleADB:
     program: str = dataclasses.field(default_factory=get_executable)
     global_options: list[str] = dataclasses.field(default_factory=list)
+
+    def get_args(self, command: list[str]):
+        return self.global_options + command
 
     def run_command(
         self,
@@ -23,7 +38,7 @@ class SimpleADB:
         limit=None,
         **kwds
     ):
-        args = self.global_options + command
+        args = self.get_args(command)
         if limit is None:
             return asyncio.create_subprocess_exec(
                 self.program,
@@ -43,6 +58,32 @@ class SimpleADB:
                 limit=limit,
                 **kwds
             )
+
+    async def check(
+        self,
+        command: list[str],
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        limit=None,
+        **kwds
+    ):
+        process = await self.run_command(
+            command,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=stderr,
+            limit=limit,
+            **kwds
+        )
+        args = self.get_args(command)
+        stdout, stderr = await process.communicate()
+        completed_process = CompletedProcess(
+            process.returncode, self.program, args, stdout, stderr, process.pid
+        )
+        if process.returncode:
+            raise CalledProcessError(completed_process)
+        return completed_process
 
 
 @dataclasses.dataclass
@@ -115,6 +156,11 @@ def parse_device(line: bytes):
 
 class Error(Exception):
     pass
+
+
+@dataclasses.dataclass
+class CalledProcessError(Error):
+    completed_process: CompletedProcess
 
 
 # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/commandline.cpp;l=1493;drc=179de72e9d5236d99369f480b8503c07c8ae4b9c
@@ -210,36 +256,31 @@ class ADB(SimpleADB):
             index + 2:]
 
     async def list_connected_devices(self):
-        process = await self.run_command(
+        process = await self.check(
             ['devices', '-l'],
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await process.communicate()
-        assert not process.returncode
-        assert stdout.startswith(b'List of devices attached\n')
+        assert process.stdout is not None
+        assert process.stdout.startswith(b'List of devices attached\n')
         result = adb_query_command_remove_trailing_newline(
-            stdout[len(b'List of devices attached\n'):]
+            process.stdout[len(b'List of devices attached\n'):]
         )
         return [parse_device(line) for line in result.splitlines()]
 
     # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/transport_local.cpp;l=81;drc=c354ca76a14d3bc5bfe8d95b08046580eb0a7036
     async def connect(self, host: str, port: Optional[int] = None):
         if port is None:
-            process = await self.run_command(
-                ['connect', host],
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            command = ['connect', host]
         else:
-            process = await self.run_command(
-                ['connect', f'{host}:{port}'],
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-        stdout, _ = await process.communicate()
-        assert not process.returncode
-        return adb_query_command_remove_trailing_newline(stdout)
+            command = ['connect', f'{host}:{port}']
+        process = await self.check(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        assert process.stdout is not None
+        return adb_query_command_remove_trailing_newline(process.stdout)
 
     # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/adb.cpp;l=1297;drc=5703eb352612566e8e5d099c99c2cecfaf22429d
     async def disconnect(
@@ -247,34 +288,29 @@ class ADB(SimpleADB):
     ):
         if host is None:
             assert port is None
-            process = await self.run_command(
-                ['disconnect'],
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            command = ['disconnect']
         else:
             if port is None:
-                process = await self.run_command(
-                    ['disconnect', host],
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
+                command = ['disconnect', host]
             else:
-                process = await self.run_command(
-                    ['disconnect', f'{host}:{port}'],
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-        stdout, stderr = await process.communicate()
-        if process.returncode:
-            raise Error(stderr)
-        return adb_query_command_remove_trailing_newline(stdout)
+                command = ['disconnect', f'{host}:{port}']
+        process = await self.check(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        assert process.stdout is not None
+        return adb_query_command_remove_trailing_newline(process.stdout)
 
     def forward(self, local: str, remote: str, stdout=None):
         return self.run_command(['forward', local, remote], stdout=stdout)
 
     def forward_remove(self, local: str):
-        return self.run_command(['forward', '--remove', local])
+        return self.check(
+            ['forward', '--remove', local],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
     def reverse(self, remote: str, local: str):
         return self.run_command(['reverse', remote, local])
@@ -286,15 +322,13 @@ class ADB(SimpleADB):
         return self.run_command(['push', *locals, remote])
 
     async def get_serialno(self):
-        process = await self.run_command(
+        process = await self.check(
             ['get-serialno'],
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await process.communicate()
-        if process.returncode:
-            raise Error
-        result = adb_query_command_remove_trailing_newline(stdout)
+        assert process.stdout is not None
+        result = adb_query_command_remove_trailing_newline(process.stdout)
         if result == b'unknown':
             return b''
         else:
