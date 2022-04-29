@@ -316,7 +316,11 @@ class ADB(SimpleADB):
         return self.run_command(['reverse', remote, local])
 
     def reverse_remove(self, remote: str):
-        return self.run_command(['reverse', '--remove', remote])
+        return self.check(
+            ['reverse', '--remove', remote],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
     def push(self, locals: list[str], remote: str):
         return self.run_command(['push', *locals, remote])
