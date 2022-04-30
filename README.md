@@ -11,18 +11,21 @@ python -m symmetrical_doodle.scrcpy --server /path/to/scrcpy-server
 ```python
 import asyncio
 
+import symmetrical_doodle.controllers
+import symmetrical_doodle.coords
 import symmetrical_doodle.decoders
 import symmetrical_doodle.demuxers
 import symmetrical_doodle.servers
+import symmetrical_doodle.utils.common
 
 
 async def main():
     # create a server with default settings
     server = symmetrical_doodle.servers.create_default_server(
-        '/path/to/scrcpy-server'
+        '/usr/share/scrcpy/scrcpy-server'
     )
     # run and connect to the server
-    server_process = await server.run()
+    await server.run()
 
     # create a demuxer to receive and process video packets
     demuxer = symmetrical_doodle.demuxers.Demuxer(server.video_connection)
@@ -40,11 +43,23 @@ async def main():
     decoder_task = asyncio.create_task(decoder.run())
     demuxer_task = asyncio.create_task(demuxer.run())
 
+    controller = symmetrical_doodle.controllers.Controller(
+        server.control_connection
+    )
+
     while True:
         frame = await frame_sink.get()
         # do something with the av frame
         image = frame.to_ndarray(format='bgr24')
         print(image.shape)
+
+        height, width = image.shape[:2]
+        position = symmetrical_doodle.coords.Position(
+            symmetrical_doodle.coords.Size(width, height),
+            symmetrical_doodle.coords.Point(width // 2, height // 2)
+        )
+        # tap at the center of the screen
+        await symmetrical_doodle.utils.common.send_tap(controller, position)
 
 
 if __name__ == '__main__':

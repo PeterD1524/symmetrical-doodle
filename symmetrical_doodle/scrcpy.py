@@ -17,7 +17,7 @@ import symmetrical_doodle.decoders
 import symmetrical_doodle.demuxers
 import symmetrical_doodle.options
 import symmetrical_doodle.servers
-import symmetrical_doodle.utils
+import symmetrical_doodle.utils.common
 
 
 def get_pyside_screens():
@@ -132,7 +132,7 @@ async def scrcpy(
         )
         if turn_screen_off:
             asyncio.run_coroutine_threadsafe(
-                symmetrical_doodle.utils.turn_screen_off(controller), loop
+                symmetrical_doodle.utils.common.turn_screen_off(controller), loop
             )
 
         control_coro = controller.run()
