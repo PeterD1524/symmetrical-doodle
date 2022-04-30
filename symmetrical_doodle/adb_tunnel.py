@@ -1,11 +1,16 @@
 import asyncio
 import asyncio.subprocess
+import contextlib
 import dataclasses
+import logging
 from typing import Optional
 
 import symmetrical_doodle.adb
+import symmetrical_doodle.utils.conection
 
 DEVICE_SOCKET_NAME = 'scrcpy'
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -25,47 +30,63 @@ class Tunnel:
     local_port: Optional[int] = dataclasses.field(default=None, init=False)
     device_socket_name: str
 
+    @contextlib.asynccontextmanager
     async def open(
         self, port: Optional[int] = None, force_forward: bool = False
     ):
-        if not force_forward:
+        if force_forward:
+            await self.enable_forward(port)
+        else:
             try:
                 await self.enable_reverse(port)
-            except Exception:
-                raise
-            else:
-                return
-        await self.enable_forward(port)
+            except symmetrical_doodle.adb.CalledProcessError:
+                logger.warning(
+                    "'adb reverse' failed, fallback to 'adb forward'"
+                )
+                await self.enable_forward(port)
+        try:
+            yield
+        finally:
+            await self.close()
 
     async def enable_forward(self, port: Optional[int] = None):
+        assert self.forward is None
+
         if port is None:
             port = 0
 
         remote = f'localabstract:{self.device_socket_name}'
-        process = await self.adb.forward(
-            f'tcp:{port}', remote, stdout=asyncio.subprocess.PIPE
-        )
-        stdout_data, _ = await process.communicate()
-        assert not process.returncode
-        self.local_port = int(stdout_data)
+        local_port = await self.adb.forward(f'tcp:{port}', remote)
+
+        self.local_port = local_port
         self.forward = True
 
     async def enable_reverse(self, port: Optional[int] = None):
+        assert self.forward is None
 
         async def append_connection(
             reader: asyncio.StreamReader, writer: asyncio.StreamWriter
         ):
             await self.connections.put((reader, writer))
 
-        self.server = await asyncio.start_server(
+        server = await asyncio.start_server(
             append_connection, host='127.0.0.1', port=port
         )
-        self.local_port = self.server.sockets[0].getsockname()[1]
+        local_port = server.sockets[0].getsockname()[1]
 
         remote = f'localabstract:{self.device_socket_name}'
-        local = f'tcp:{self.local_port}'
-        process = await self.adb.reverse(remote, local)
-        assert not await process.wait()
+        local = f'tcp:{local_port}'
+        try:
+            port = await self.adb.reverse(remote, local)
+            assert port is None
+        except symmetrical_doodle.adb.CalledProcessError:
+            server.close()
+            await server.wait_closed()
+            await self.close_connections()
+            raise
+
+        self.server = server
+        self.local_port = local_port
         self.forward = False
 
     async def close(self):
@@ -86,9 +107,7 @@ class Tunnel:
         self.connections = asyncio.Queue()
         while True:
             try:
-                _, writer = connections.get_nowait()
+                connection = connections.get_nowait()
             except asyncio.QueueEmpty:
                 break
-            writer.write_eof()
-            writer.close()
-            await writer.wait_closed()
+            symmetrical_doodle.utils.conection.close_connection(connection)

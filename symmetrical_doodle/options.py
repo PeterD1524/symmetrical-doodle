@@ -1,6 +1,7 @@
 import dataclasses
 import enum
 from typing import Optional
+import logging
 
 import symmetrical_doodle.config
 
@@ -14,6 +15,20 @@ class LogLevel(enum.Enum):
 
     def to_server_string(self):
         return self.name.lower()
+
+    def to_python_logging_level(self):
+        if self == LogLevel.VERBOSE:
+            return logging.NOTSET
+        elif self == LogLevel.DEBUG:
+            return logging.DEBUG
+        elif self == LogLevel.INFO:
+            return logging.INFO
+        elif self == LogLevel.WARN:
+            return logging.WARNING
+        elif self == LogLevel.ERROR:
+            return logging.ERROR
+        else:
+            raise RuntimeError
 
 
 class RecordFormat(enum.Enum):

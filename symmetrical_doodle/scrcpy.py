@@ -19,12 +19,6 @@ import symmetrical_doodle.options
 import symmetrical_doodle.servers
 import symmetrical_doodle.utils
 
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(levelname)s: %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 def get_pyside_screens():
     import symmetrical_doodle.screens.pyside_screens
@@ -128,8 +122,7 @@ async def scrcpy(
         thread = threading.Thread(target=loop.run_forever)
     thread.start()
 
-    server_process = asyncio.run_coroutine_threadsafe(server.run(),
-                                                      loop).result()
+    asyncio.run_coroutine_threadsafe(server.run(), loop).result()
 
     coros = []
 
@@ -194,7 +187,7 @@ async def scrcpy(
     loop.call_soon_threadsafe(event.set)
     event_future.result()
 
-    clean_up(loop, server, server_process)
+    clean_up(loop, server)
 
     loop.call_soon_threadsafe(loop.stop)
 
@@ -205,47 +198,19 @@ async def scrcpy(
 
 
 def clean_up(
-    loop: asyncio.AbstractEventLoop, server: symmetrical_doodle.servers.Server,
-    server_process: asyncio.subprocess.Process
+    loop: asyncio.AbstractEventLoop, server: symmetrical_doodle.servers.Server
 ):
-
-    async def close_writer(writer: asyncio.StreamWriter):
-        writer.write_eof()
-        writer.close()
-        await writer.wait_closed()
-
-    asyncio.run_coroutine_threadsafe(
-        close_writer(server.video_connection[1]), loop
-    ).result()
-
-    if server.control_connection is not None:
-        asyncio.run_coroutine_threadsafe(
-            close_writer(server.control_connection[1]), loop
-        ).result()
-
-    # Give some delay for the server to terminate properly
-    WATCHDOG_DELAY = 1
-
-    async def wait_for(
-        process: asyncio.subprocess.Process, timeout: Optional[float]
-    ):
-        try:
-            await asyncio.wait_for(process.wait(), timeout)
-        except asyncio.TimeoutError:
-            # After this delay, kill the server if it's not dead already.
-            # On some devices, closing the sockets is not sufficient to wake up
-            # the blocking calls while the device is asleep.
-            logger.warning('Killing the server...')
-            process.kill()
-
-    asyncio.run_coroutine_threadsafe(
-        wait_for(server_process, WATCHDOG_DELAY), loop
-    ).result()
+    asyncio.run_coroutine_threadsafe(server.close(), loop).result()
 
 
 async def main():
 
     options = symmetrical_doodle.cli.parse_args()
+
+    logging.basicConfig(
+        format='%(levelname)s: %(message)s',
+        level=options.log_level.to_python_logging_level()
+    )
 
     await scrcpy(
         options.server_path,

@@ -1,13 +1,18 @@
 import asyncio
+import asyncio.subprocess
 import dataclasses
+import logging
 import pathlib
 from typing import Optional
 
 import symmetrical_doodle.adb
 import symmetrical_doodle.adb_tunnel
+import symmetrical_doodle.config
 import symmetrical_doodle.coords
 import symmetrical_doodle.options
-import symmetrical_doodle.config
+import symmetrical_doodle.utils.conection
+
+logger = logging.getLogger(__name__)
 
 DEVICE_SERVER_PATH = '/data/local/tmp/scrcpy-server.jar'
 
@@ -134,6 +139,9 @@ class Server:
 
     tunnel: symmetrical_doodle.adb_tunnel.Tunnel
 
+    process: Optional[asyncio.subprocess.Process
+                      ] = dataclasses.field(default=None, init=False)
+
     video_connection: Optional[tuple[asyncio.StreamReader,
                                      asyncio.StreamWriter]
                                ] = dataclasses.field(default=None, init=False)
@@ -193,15 +201,15 @@ class Server:
 
         return self.adb.run_command(command)
 
-    async def connect_to(self):
+    async def connect(self):
         if self.tunnel.forward:
             host = '127.0.0.1'
             port = self.tunnel.local_port
 
-            self.video_connection = await connect_to_server(
-                100, 0.1, host, port
-            )
+            self.video_connection = await retry_connect(100, 0.1, host, port)
             if self.params.control:
+                # we know that the device is listening, we don't need several
+                # attempts
                 self.control_connection = await asyncio.open_connection(
                     host=host, port=port
                 )
@@ -210,27 +218,18 @@ class Server:
             if self.params.control:
                 self.control_connection = await self.tunnel.connections.get()
 
-        await self.tunnel.close()
-
-        self.info = await read_device_info(self.video_connection)
-
     async def run(self):
-        """Runs the server and connects to the server.
-
-        Returns:
-            The server process.
-        """
+        """Runs the server and connects to the server."""
         await self.push()
 
-        await self.tunnel.open(
+        async with self.tunnel.open(
             port=self.params.port, force_forward=self.params.force_adb_forward
-        )
+        ):
+            self.process = await self.execute()
+            await self.connect()
 
-        process = await self.execute()
-
-        await self.connect_to()
-
-        return process
+        assert self.video_connection is not None
+        self.info = await read_device_info(self.video_connection)
 
     async def push(self):
         assert self.params.server_path.is_file()
@@ -239,9 +238,35 @@ class Server:
         )
         assert not await process.wait()
 
+    async def close(self):
 
-async def connect_to_server(attempts: int, delay: float, host, port):
+        if self.video_connection is not None:
+            await symmetrical_doodle.utils.conection.close_connection(
+                self.video_connection
+            )
+            self.video_connection = None
+        if self.control_connection is not None:
+            await symmetrical_doodle.utils.conection.close_connection(
+                self.control_connection
+            )
+            self.control_connection = None
+
+        if self.process is not None:
+            # Give some delay for the server to terminate properly
+            WATCHDOG_DELAY = 1
+            try:
+                await asyncio.wait_for(self.process.wait(), WATCHDOG_DELAY)
+            except asyncio.TimeoutError:
+                # After this delay, kill the server if it's not dead already.
+                # On some devices, closing the sockets is not sufficient to
+                # wake up the blocking calls while the device is asleep.
+                logger.warning('Killing the server...')
+                self.process.kill()
+
+
+async def retry_connect(attempts: int, delay: float, host, port):
     while attempts > 0:
+        logger.debug('Remaining connection attempts: %s', attempts)
         try:
             reader, writer = await asyncio.open_connection(
                 host=host, port=port
@@ -249,12 +274,12 @@ async def connect_to_server(attempts: int, delay: float, host, port):
         except ConnectionRefusedError:
             pass
         else:
-            data = await reader.read(n=1)
-            if len(data) == 1:
-                return reader, writer
+            try:
+                await reader.readexactly(1)
+            except asyncio.IncompleteReadError:
+                symmetrical_doodle
             else:
-                writer.close()
-                await writer.wait_closed()
+                return reader, writer
 
         attempts -= 1
         if attempts:

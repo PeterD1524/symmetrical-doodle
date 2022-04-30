@@ -302,8 +302,20 @@ class ADB(SimpleADB):
         assert process.stdout is not None
         return adb_query_command_remove_trailing_newline(process.stdout)
 
-    def forward(self, local: str, remote: str, stdout=None):
-        return self.run_command(['forward', local, remote], stdout=stdout)
+    # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/commandline.cpp;l=1889;drc=4b34d2791b4954774738987406a367f8e22b54d1
+    async def forward(self, local: str, remote: str):
+        process = await self.check(
+            ['forward', local, remote],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        assert process.stdout is not None
+        if process.stdout:
+            assert process.stdout.endswith(b'\n')
+            resolved_port = int(process.stdout[:-len(b'\n')])
+            return resolved_port
+        else:
+            return None
 
     def forward_remove(self, local: str):
         return self.check(
@@ -312,8 +324,19 @@ class ADB(SimpleADB):
             stderr=asyncio.subprocess.PIPE
         )
 
-    def reverse(self, remote: str, local: str):
-        return self.run_command(['reverse', remote, local])
+    async def reverse(self, remote: str, local: str):
+        process = await self.check(
+            ['reverse', remote, local],
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        assert process.stdout is not None
+        if process.stdout:
+            assert process.stdout.endswith(b'\n')
+            resolved_port = int(process.stdout[:-len(b'\n')])
+            return resolved_port
+        else:
+            return None
 
     def reverse_remove(self, remote: str):
         return self.check(
