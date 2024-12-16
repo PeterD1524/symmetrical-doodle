@@ -94,7 +94,6 @@ class Tunnel:
                 f"localabstract:{self.device_socket_name}"
             )
             self.server.close()
-            await self.server.wait_closed()
             await self.close_connections()
 
     async def close_connections(self):
