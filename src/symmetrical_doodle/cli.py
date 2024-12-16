@@ -115,8 +115,8 @@ def get_parser():
     )
     parser.add_argument(
         "-b",
-        "--bit-rate",
-        default=options_default.bit_rate,
+        "--video-bit-rate",
+        default=options_default.video_bit_rate,
         help="Encode the video at the gitven bit-rate, expressed in bits/s. Unit suffixes are supported: 'K' (x1000) and 'M' (x1000000). Default is %(default)s.",
         metavar="value",
     )
@@ -441,10 +441,10 @@ def parse_args(args=None):
 
     kwargs = {}
 
-    bit_rate = args.bit_rate
-    if not isinstance(bit_rate, int):
-        bit_rate = parse_bit_rate(bit_rate)
-    assert 0 <= bit_rate <= 0x7FFFFFFF
+    video_bit_rate = args.video_bit_rate
+    if not isinstance(video_bit_rate, int):
+        video_bit_rate = parse_bit_rate(video_bit_rate)
+    assert 0 <= video_bit_rate <= 0x7FFFFFFF
 
     display_id = args.display
     assert 0 <= display_id <= 0x7FFFFFFF
@@ -573,7 +573,7 @@ def parse_args(args=None):
 
     options = symmetrical_doodle.options.Options(
         args.server,
-        bit_rate=bit_rate,
+        video_bit_rate=video_bit_rate,
         crop=args.crop,
         display_id=display_id,
         select_usb=args.select_usb,
