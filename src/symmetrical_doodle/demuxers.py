@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import enum
 
+import symmetrical_doodle.packet_mergers
 import symmetrical_doodle.packets
 import symmetrical_doodle.utils.buffer
 
@@ -13,15 +14,17 @@ PACKET_FLAG_KEY_FRAME = 1 << 62
 PACKET_PTS_MASK = PACKET_FLAG_KEY_FRAME - 1
 
 
+class CodecID(enum.Enum):
+    H264 = 0x68323634  # "h264" in ASCII
+    H265 = 0x68323635  # "h265" in ASCII
+    AV1 = 0x00617631  # "av1" in ASCII
+    OPUS = 0x6F707573  # "opus" in ASCII
+    AAC = 0x00616163  # "aac" in ASCII
+    FLAC = 0x666C6163  # "flac" in ASCII
+    RAW = 0x00726177  # "raw" in ASCII
+
+
 def to_av_codec_id(codec_id: int):
-    class CodecID(enum.Enum):
-        H264 = 0x68323634  # "h264" in ASCII
-        H265 = 0x68323635  # "h265" in ASCII
-        AV1 = 0x00617631  # "av1" in ASCII
-        OPUS = 0x6F707573  # "opus" in ASCII
-        AAC = 0x00616163  # "aac" in ASCII
-        FLAC = 0x666C6163  # "flac" in ASCII
-        RAW = 0x00726177  # "raw" in ASCII
 
     av_codec_names = {
         CodecID.H264.value: "h264",
@@ -73,9 +76,22 @@ class Demuxer:
         if True:
             width, height = await self.receive_video_size()
 
+        must_merge_config_packet = (
+            raw_codec_id == CodecID.H264.value or raw_codec_id == CodecID.H265
+        )
+
+        merger = (
+            symmetrical_doodle.packet_mergers.Merger()
+            if must_merge_config_packet
+            else None
+        )
+
         while True:
             packet = await self.receive_packet()
-            await self.push_packet(packet)
+            if must_merge_config_packet:
+                assert merger is not None
+                merger.merge(packet)
+            await self.push_packet_to_sinks(packet)
 
     async def receive_packet(self):
         reader, _ = self.connection
@@ -100,25 +116,6 @@ class Demuxer:
         packet.dts = packet.pts
 
         return packet
-
-    async def push_packet(self, packet: symmetrical_doodle.packets.Packet):
-        is_config = packet.pts is None
-
-        if self.pending is not None:
-            self.pending.input += packet.input
-
-            if not is_config:
-                self.pending.pts = packet.pts
-                self.pending.dts = packet.dts
-                self.pending.flags = packet.flags
-                packet = self.pending
-        elif is_config:
-            self.pending = symmetrical_doodle.packets.Packet(packet.input)
-
-        await self.push_packet_to_sinks(packet)
-
-        if not is_config:
-            self.pending = None
 
     async def push_packet_to_sinks(self, packet: symmetrical_doodle.packets.Packet):
         for sink in self.sinks:
