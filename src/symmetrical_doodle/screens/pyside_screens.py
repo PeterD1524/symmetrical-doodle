@@ -13,14 +13,14 @@ import PySide6.QtWidgets
 @dataclasses.dataclass
 class FrameReceiver:
     signal_instance: PySide6.QtCore.SignalInstance
-    frame_sink: asyncio.Queue[
-        av.VideoFrame
-    ] = dataclasses.field(default_factory=asyncio.Queue, init=False)
+    frame_sink: asyncio.Queue[av.VideoFrame] = dataclasses.field(
+        default_factory=asyncio.Queue, init=False
+    )
 
     async def run(self):
         while True:
             frame = await self.frame_sink.get()
-            image = frame.to_ndarray(format='rgb24')
+            image = frame.to_ndarray(format="rgb24")
             self.signal_instance.emit(image)
 
 
@@ -41,7 +41,7 @@ class PySideScreen(PySide6.QtWidgets.QWidget):
         self,
         thread: Thread,
         size: Optional[tuple[int, int]] = None,
-        window_title: Optional[str] = None
+        window_title: Optional[str] = None,
     ):
 
         super().__init__()

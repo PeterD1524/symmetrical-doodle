@@ -4,10 +4,8 @@ import symmetrical_doodle.utils.buffer
 
 
 @pytest.mark.parametrize(
-    'buf,value,expected', [
-        (bytearray(), 0xabcd, (0xab, 0xcd)),
-        (bytearray(16), 0xabcd, (0xab, 0xcd)),
-    ]
+    "buf,value,expected",
+    [(bytearray(), 0xABCD, (0xAB, 0xCD)), (bytearray(16), 0xABCD, (0xAB, 0xCD))],
 )
 def test_write16be(buf: bytearray, value: int, expected: tuple[int, int]):
     old_bytes = bytes(buf)
@@ -19,13 +17,9 @@ def test_write16be(buf: bytearray, value: int, expected: tuple[int, int]):
 
 
 @pytest.mark.parametrize(
-    'buf,value,expected', [
-        (bytearray(), 0xabcd1234, (0xab, 0xcd, 0x12, 0x34)),
-    ]
+    "buf,value,expected", [(bytearray(), 0xABCD1234, (0xAB, 0xCD, 0x12, 0x34))]
 )
-def test_write32be(
-    buf: bytearray, value: int, expected: tuple[int, int, int, int]
-):
+def test_write32be(buf: bytearray, value: int, expected: tuple[int, int, int, int]):
     old_bytes = bytes(buf)
     symmetrical_doodle.utils.buffer.write32be(buf, value)
     assert len(buf) == len(old_bytes) + 4
@@ -37,16 +31,17 @@ def test_write32be(
 
 
 @pytest.mark.parametrize(
-    'buf,value,expected', [
+    "buf,value,expected",
+    [
         (
-            bytearray(), 0xabcd1234567890ef,
-            (0xab, 0xcd, 0x12, 0x34, 0x56, 0x78, 0x90, 0xef)
-        ),
-    ]
+            bytearray(),
+            0xABCD1234567890EF,
+            (0xAB, 0xCD, 0x12, 0x34, 0x56, 0x78, 0x90, 0xEF),
+        )
+    ],
 )
 def test_write64be(
-    buf: bytearray, value: int, expected: tuple[int, int, int, int, int, int,
-                                                int, int]
+    buf: bytearray, value: int, expected: tuple[int, int, int, int, int, int, int, int]
 ):
     old_bytes = bytes(buf)
     symmetrical_doodle.utils.buffer.write64be(buf, value)
@@ -62,19 +57,13 @@ def test_write64be(
     assert buf[-1] == expected[7]
 
 
-@pytest.mark.parametrize(
-    'buf,start,expected', [
-        (b'\xab\xcd\x124', 0, (0xabcd1234, 4)),
-    ]
-)
+@pytest.mark.parametrize("buf,start,expected", [(b"\xab\xcd\x124", 0, (0xABCD1234, 4))])
 def test_read32be(buf: bytes, start: int, expected: tuple[int, int]):
     assert symmetrical_doodle.utils.buffer.read32be(buf, start) == expected
 
 
 @pytest.mark.parametrize(
-    'buf,start,expected', [
-        (b'\xab\xcd\x124Vx\x90\xef', 0, (0xabcd1234567890ef, 8)),
-    ]
+    "buf,start,expected", [(b"\xab\xcd\x124Vx\x90\xef", 0, (0xABCD1234567890EF, 8))]
 )
 def test_read64be(buf: bytes, start: int, expected: tuple[int, int]):
     assert symmetrical_doodle.utils.buffer.read64be(buf, start) == expected

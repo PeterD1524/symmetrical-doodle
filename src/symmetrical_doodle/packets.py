@@ -12,7 +12,7 @@ class Packet:
     dts: Any = dataclasses.field(default=None, init=False)
     flags: Any = dataclasses.field(default=0, init=False)
 
-    input: bytes = dataclasses.field(default=b'')
+    input: bytes = dataclasses.field(default=b"")
 
     def create_av_packet(self):
         packet = av.Packet(self.input)

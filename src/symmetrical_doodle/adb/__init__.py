@@ -6,7 +6,7 @@ from typing import Optional
 
 
 def get_executable():
-    path = shutil.which('adb')
+    path = shutil.which("adb")
     assert path is not None
     return path
 
@@ -36,17 +36,12 @@ class SimpleADB:
         stdout=None,
         stderr=None,
         limit=None,
-        **kwds
+        **kwds,
     ):
         args = self.get_args(command)
         if limit is None:
             return asyncio.create_subprocess_exec(
-                self.program,
-                *args,
-                stdin=stdin,
-                stdout=stdout,
-                stderr=stderr,
-                **kwds
+                self.program, *args, stdin=stdin, stdout=stdout, stderr=stderr, **kwds
             )
         else:
             return asyncio.create_subprocess_exec(
@@ -56,7 +51,7 @@ class SimpleADB:
                 stdout=stdout,
                 stderr=stderr,
                 limit=limit,
-                **kwds
+                **kwds,
             )
 
     async def check(
@@ -66,15 +61,10 @@ class SimpleADB:
         stdout=None,
         stderr=None,
         limit=None,
-        **kwds
+        **kwds,
     ):
         process = await self.run_command(
-            command,
-            stdin=stdin,
-            stdout=stdout,
-            stderr=stderr,
-            limit=limit,
-            **kwds
+            command, stdin=stdin, stdout=stdout, stderr=stderr, limit=limit, **kwds
         )
         args = self.get_args(command)
         stdout, stderr = await process.communicate()
@@ -100,58 +90,65 @@ class Transport:
 
 
 def extract_transport_info(result: bytes, key: bytes):
-    result, sep, value = result.rpartition(b' ' + key)
+    result, sep, value = result.rpartition(b" " + key)
     if not sep:
         raise ValueError
     return result, value
 
 
-PERMISSIONS_HELP_URL = b'http://developer.android.com/tools/device.html'
+PERMISSIONS_HELP_URL = b"http://developer.android.com/tools/device.html"
 
 CONNECTION_STATES = (
-    b'offline', b'bootloader', b'device', b'host', b'recovery', b'rescue',
-    b'sideload', b'unauthorized', b'authorizing', b'connecting', b'unknown'
+    b"offline",
+    b"bootloader",
+    b"device",
+    b"host",
+    b"recovery",
+    b"rescue",
+    b"sideload",
+    b"unauthorized",
+    b"authorizing",
+    b"connecting",
+    b"unknown",
 )
 
 
 # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/transport.cpp;l=1414;drc=713f665af47e943a378b818c3056cb30e0f786e6
 def parse_device(line: bytes):
     if line.startswith(
-        b'(no serial number)' + b' ' * (22 - len(b'(no serial number)'))
+        b"(no serial number)" + b" " * (22 - len(b"(no serial number)"))
     ):
-        serial = b''
+        serial = b""
     else:
         serial = line[:22].rstrip()
     line = line[22:]
-    line, transport_id = extract_transport_info(line, b'transport_id:')
+    line, transport_id = extract_transport_info(line, b"transport_id:")
     transport_id = int(transport_id)
     try:
-        line, device = extract_transport_info(line, b'device:')
+        line, device = extract_transport_info(line, b"device:")
     except ValueError:
-        device = b''
+        device = b""
     try:
-        line, model = extract_transport_info(line, b'model:')
+        line, model = extract_transport_info(line, b"model:")
     except ValueError:
-        model = b''
+        model = b""
     try:
-        line, product = extract_transport_info(line, b'product:')
+        line, product = extract_transport_info(line, b"product:")
     except ValueError:
-        product = b''
-    assert line.startswith(b' ')
-    line = line[len(b' '):]
-    if line.startswith(b'no permissions'):
+        product = b""
+    assert line.startswith(b" ")
+    line = line[len(b" ") :]
+    if line.startswith(b"no permissions"):
         index = line.index(PERMISSIONS_HELP_URL)
         assert index == line.rindex(PERMISSIONS_HELP_URL)
-        state_length = index + len(PERMISSIONS_HELP_URL) + len(b']')
+        state_length = index + len(PERMISSIONS_HELP_URL) + len(b"]")
         state = line[:state_length]
         line = line[state_length:]
-        devpath = line.removeprefix(b' ')
+        devpath = line.removeprefix(b" ")
     else:
-        state, _, devpath = line.partition(b' ')
+        state, _, devpath = line.partition(b" ")
         assert state in CONNECTION_STATES
-    return Transport(
-        transport_id, state, serial, product, model, device, devpath
-    )
+    return Transport(transport_id, state, serial, product, model, device, devpath)
 
 
 class Error(Exception):
@@ -165,8 +162,8 @@ class CalledProcessError(Error):
 
 # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/commandline.cpp;l=1493;drc=179de72e9d5236d99369f480b8503c07c8ae4b9c
 def adb_query_command_remove_trailing_newline(s: bytes):
-    assert s.endswith(b'\n')
-    return s[:-len(b'\n')]
+    assert s.endswith(b"\n")
+    return s[: -len(b"\n")]
 
 
 @dataclasses.dataclass
@@ -178,12 +175,12 @@ class ADB(SimpleADB):
             del self.serial
             del self.transport_id
             try:
-                self.global_options.index('-d')
+                self.global_options.index("-d")
             except ValueError:
-                self.global_options.append('-d')
+                self.global_options.append("-d")
         else:
             try:
-                self.global_options.remove('-d')
+                self.global_options.remove("-d")
             except ValueError:
                 pass
 
@@ -193,18 +190,18 @@ class ADB(SimpleADB):
             del self.serial
             del self.transport_id
             try:
-                self.global_options.index('-e')
+                self.global_options.index("-e")
             except ValueError:
-                self.global_options.append('-e')
+                self.global_options.append("-e")
         else:
             try:
-                self.global_options.remove('-e')
+                self.global_options.remove("-e")
             except ValueError:
                 pass
 
     @property
     def serial(self):
-        index = self.global_options.index('-s')
+        index = self.global_options.index("-s")
         return self.global_options[index + 1]
 
     @serial.setter
@@ -213,24 +210,25 @@ class ADB(SimpleADB):
         self.use_tcpip_device(False)
         del self.transport_id
         try:
-            index = self.global_options.index('-s')
+            index = self.global_options.index("-s")
         except ValueError:
-            self.global_options.extend(['-s', value])
+            self.global_options.extend(["-s", value])
             return
         self.global_options[index + 1] = value
 
     @serial.deleter
     def serial(self):
         try:
-            index = self.global_options.index('-s')
+            index = self.global_options.index("-s")
         except ValueError:
             return
-        self.global_options = self.global_options[:index] + self.global_options[
-            index + 2:]
+        self.global_options = (
+            self.global_options[:index] + self.global_options[index + 2 :]
+        )
 
     @property
     def transport_id(self):
-        index = self.global_options.index('-t')
+        index = self.global_options.index("-t")
         return int(self.global_options[index + 1])
 
     @transport_id.setter
@@ -240,64 +238,59 @@ class ADB(SimpleADB):
         del self.serial
         value = str(value)
         try:
-            index = self.global_options.index('-t')
+            index = self.global_options.index("-t")
         except ValueError:
-            self.global_options.extend(['-t', value])
+            self.global_options.extend(["-t", value])
             return
         self.global_options[index + 1] = value
 
     @transport_id.deleter
     def transport_id(self):
         try:
-            index = self.global_options.index('-t')
+            index = self.global_options.index("-t")
         except ValueError:
             return
-        self.global_options = self.global_options[:index] + self.global_options[
-            index + 2:]
+        self.global_options = (
+            self.global_options[:index] + self.global_options[index + 2 :]
+        )
 
     async def list_connected_devices(self):
         process = await self.check(
-            ['devices', '-l'],
+            ["devices", "-l"],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
         assert process.stdout is not None
-        assert process.stdout.startswith(b'List of devices attached\n')
+        assert process.stdout.startswith(b"List of devices attached\n")
         result = adb_query_command_remove_trailing_newline(
-            process.stdout[len(b'List of devices attached\n'):]
+            process.stdout[len(b"List of devices attached\n") :]
         )
         return [parse_device(line) for line in result.splitlines()]
 
     # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/transport_local.cpp;l=81;drc=c354ca76a14d3bc5bfe8d95b08046580eb0a7036
     async def connect(self, host: str, port: Optional[int] = None):
         if port is None:
-            command = ['connect', host]
+            command = ["connect", host]
         else:
-            command = ['connect', f'{host}:{port}']
+            command = ["connect", f"{host}:{port}"]
         process = await self.check(
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         assert process.stdout is not None
         return adb_query_command_remove_trailing_newline(process.stdout)
 
     # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/adb.cpp;l=1297;drc=5703eb352612566e8e5d099c99c2cecfaf22429d
-    async def disconnect(
-        self, host: Optional[str] = None, port: Optional[int] = None
-    ):
+    async def disconnect(self, host: Optional[str] = None, port: Optional[int] = None):
         if host is None:
             assert port is None
-            command = ['disconnect']
+            command = ["disconnect"]
         else:
             if port is None:
-                command = ['disconnect', host]
+                command = ["disconnect", host]
             else:
-                command = ['disconnect', f'{host}:{port}']
+                command = ["disconnect", f"{host}:{port}"]
         process = await self.check(
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         assert process.stdout is not None
         return adb_query_command_remove_trailing_newline(process.stdout)
@@ -305,61 +298,61 @@ class ADB(SimpleADB):
     # https://cs.android.com/android/platform/superproject/+/master:packages/modules/adb/client/commandline.cpp;l=1889;drc=4b34d2791b4954774738987406a367f8e22b54d1
     async def forward(self, local: str, remote: str):
         process = await self.check(
-            ['forward', local, remote],
+            ["forward", local, remote],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
         assert process.stdout is not None
         if process.stdout:
-            assert process.stdout.endswith(b'\n')
-            resolved_port = int(process.stdout[:-len(b'\n')])
+            assert process.stdout.endswith(b"\n")
+            resolved_port = int(process.stdout[: -len(b"\n")])
             return resolved_port
         else:
             return None
 
     def forward_remove(self, local: str):
         return self.check(
-            ['forward', '--remove', local],
+            ["forward", "--remove", local],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
 
     async def reverse(self, remote: str, local: str):
         process = await self.check(
-            ['reverse', remote, local],
+            ["reverse", remote, local],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
         assert process.stdout is not None
         if process.stdout:
-            assert process.stdout.endswith(b'\n')
-            resolved_port = int(process.stdout[:-len(b'\n')])
+            assert process.stdout.endswith(b"\n")
+            resolved_port = int(process.stdout[: -len(b"\n")])
             return resolved_port
         else:
             return None
 
     def reverse_remove(self, remote: str):
         return self.check(
-            ['reverse', '--remove', remote],
+            ["reverse", "--remove", remote],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
 
     def push(self, locals: list[str], remote: str):
-        return self.run_command(['push', *locals, remote])
+        return self.run_command(["push", *locals, remote])
 
     async def get_serialno(self):
         process = await self.check(
-            ['get-serialno'],
+            ["get-serialno"],
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
         assert process.stdout is not None
         result = adb_query_command_remove_trailing_newline(process.stdout)
-        if result == b'unknown':
-            return b''
+        if result == b"unknown":
+            return b""
         else:
             return result
 
     def start_server(self):
-        return self.run_command(['start-server'])
+        return self.run_command(["start-server"])

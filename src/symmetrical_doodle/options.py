@@ -101,7 +101,7 @@ class Options:
     crop: Optional[str] = None
     record_filename: Optional[str] = None
     window_title: Optional[str] = None
-    push_target: Optional[str] = '/sdcard/Download/'
+    push_target: Optional[str] = "/sdcard/Download/"
     render_driver: Optional[str] = None
     codec_options: Optional[str] = None
     encoder_name: Optional[str] = None
@@ -114,8 +114,9 @@ class Options:
     tunnel_host: Optional[str] = None
     tunnel_port: int = 0
     shortcut_mods: ShortcutMods = dataclasses.field(
-        default_factory=lambda:
-        ShortcutMods(data=(ShortcutMod.LALT, ShortcutMod.LSUPER))
+        default_factory=lambda: ShortcutMods(
+            data=(ShortcutMod.LALT, ShortcutMod.LSUPER)
+        )
     )
     max_size: int = 0
     bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE

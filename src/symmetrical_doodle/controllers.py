@@ -8,9 +8,9 @@ import symmetrical_doodle.tasks
 @dataclasses.dataclass
 class Controller:
     control_connection: tuple[asyncio.StreamReader, asyncio.StreamWriter]
-    queue: asyncio.Queue[symmetrical_doodle.tasks.Task[
-        symmetrical_doodle.control_message.ControlMessage
-    ]] = dataclasses.field(default_factory=asyncio.Queue, init=False)
+    queue: asyncio.Queue[
+        symmetrical_doodle.tasks.Task[symmetrical_doodle.control_message.ControlMessage]
+    ] = dataclasses.field(default_factory=asyncio.Queue, init=False)
 
     async def push_message(
         self, message: symmetrical_doodle.control_message.ControlMessage
