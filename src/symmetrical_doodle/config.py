@@ -1,4 +1,4 @@
-SCRCPY_VERSION = "3.0"
+SCRCPY_VERSION = "3.1"
 """the version, updated on release"""
 
 DEFAULT_LOCAL_PORT_RANGE = (27183, 27199)
@@ -7,8 +7,8 @@ DEFAULT_LOCAL_PORT_RANGE = (27183, 27199)
 overridden by option --port
 """
 
-DEFAULT_BIT_RATE = 8000000
+DEFAULT_VIDEO_BIT_RATE = 8000000
 """the default video bitrate, in bits/second
 
-overridden by option --bit-rate
+overridden by option --video-bit-rate
 """

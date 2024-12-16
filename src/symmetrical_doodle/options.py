@@ -119,7 +119,7 @@ class Options:
         )
     )
     max_size: int = 0
-    bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE
+    video_bit_rate: int = symmetrical_doodle.config.DEFAULT_VIDEO_BIT_RATE
     max_fps: int = 0
     lock_video_orientation: LockVideoOrientation = LockVideoOrientation.UNLOCKED
     rotation: int = 0

@@ -27,7 +27,7 @@ def create_server_params(
     port: Optional[int] = None,
     log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.options.LogLevel.INFO,
     max_size: int = 0,
-    bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE,
+    video_bit_rate: int = symmetrical_doodle.config.DEFAULT_VIDEO_BIT_RATE,
     max_fps: int = 0,
     lock_video_orientation: symmetrical_doodle.options.LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.UNLOCKED,
     display_id: int = 0,
@@ -49,7 +49,7 @@ def create_server_params(
         encoder_name=encoder_name,
         port=port,
         max_size=max_size,
-        bit_rate=bit_rate,
+        video_bit_rate=video_bit_rate,
         max_fps=max_fps,
         lock_video_orientation=lock_video_orientation,
         control=control,
@@ -106,7 +106,7 @@ class ServerParams:
     encoder_name: Optional[str]
     port: Optional[int]
     max_size: int
-    bit_rate: int
+    video_bit_rate: int
     max_fps: int
     lock_video_orientation: int
     control: bool
@@ -156,8 +156,9 @@ class Server:
         ]
 
         command.append(f"log_level={self.params.log_level.to_server_string()}")
-        command.append(f"bit_rate={self.params.bit_rate}")
+        command.append(f"video_bit_rate={self.params.video_bit_rate}")
 
+        command.append("audio=false")
         if self.params.max_size:
             command.append(f"max_size={self.params.max_size}")
         if self.params.max_fps:
