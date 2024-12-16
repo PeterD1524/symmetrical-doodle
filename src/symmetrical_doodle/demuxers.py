@@ -2,6 +2,9 @@ import asyncio
 import dataclasses
 import enum
 
+import av.codec
+import av.codec.context
+
 import symmetrical_doodle.packet_mergers
 import symmetrical_doodle.packets
 import symmetrical_doodle.utils.buffer
@@ -45,9 +48,12 @@ def to_av_codec_id(codec_id: int):
 class Demuxer:
     connection: tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
-    sinks: list[asyncio.Queue[symmetrical_doodle.packets.Packet]] = dataclasses.field(
-        default_factory=list, init=False
-    )
+    sinks: list[
+        asyncio.Queue[
+            symmetrical_doodle.packets.VideoCodecContext
+            | symmetrical_doodle.packets.Packet
+        ]
+    ] = dataclasses.field(default_factory=list, init=False)
 
     pending: symmetrical_doodle.packets.Packet = dataclasses.field(
         default=None, init=False
@@ -73,8 +79,19 @@ class Demuxer:
         codec_id = to_av_codec_id(raw_codec_id)
         assert codec_id is not None
 
-        if True:
+        codec = av.codec.Codec(codec_id)
+
+        flags = av.codec.context.Flags.low_delay
+
+        if codec.type == "video":
             width, height = await self.receive_video_size()
+            context = symmetrical_doodle.packets.VideoCodecContext(
+                codec, flags, width, height, "yuv420p"
+            )
+        else:
+            assert False
+
+        await self.push_item_to_sinks(context)
 
         must_merge_config_packet = (
             raw_codec_id == CodecID.H264.value or raw_codec_id == CodecID.H265
@@ -91,7 +108,7 @@ class Demuxer:
             if must_merge_config_packet:
                 assert merger is not None
                 merger.merge(packet)
-            await self.push_packet_to_sinks(packet)
+            await self.push_item_to_sinks(packet)
 
     async def receive_packet(self):
         reader, _ = self.connection
@@ -117,6 +134,12 @@ class Demuxer:
 
         return packet
 
-    async def push_packet_to_sinks(self, packet: symmetrical_doodle.packets.Packet):
+    async def push_item_to_sinks(
+        self,
+        item: (
+            symmetrical_doodle.packets.VideoCodecContext
+            | symmetrical_doodle.packets.Packet
+        ),
+    ):
         for sink in self.sinks:
-            await sink.put(packet)
+            await sink.put(item)
