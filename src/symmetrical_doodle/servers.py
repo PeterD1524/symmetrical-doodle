@@ -79,23 +79,18 @@ def create_default_server(server_path: str):
 @dataclasses.dataclass
 class ServerInfo:
     device_name: bytes
-    frame_size: symmetrical_doodle.coords.Size
 
 
 async def read_device_info(
     device_connection: tuple[asyncio.StreamReader, asyncio.StreamWriter]
 ):
     reader, _ = device_connection
-    data = await reader.readexactly(DEVICE_NAME_FIELD_LENGTH + 4)
+    data = await reader.readexactly(DEVICE_NAME_FIELD_LENGTH)
     device_name = data[: DEVICE_NAME_FIELD_LENGTH - 1]
     end = device_name.find(b"\x00")
     if end != -1:
         device_name = device_name[:end]
-    width = (data[DEVICE_NAME_FIELD_LENGTH] << 8) | data[DEVICE_NAME_FIELD_LENGTH + 1]
-    height = (data[DEVICE_NAME_FIELD_LENGTH + 2] << 8) | data[
-        DEVICE_NAME_FIELD_LENGTH + 3
-    ]
-    return ServerInfo(device_name, symmetrical_doodle.coords.Size(width, height))
+    return ServerInfo(device_name)
 
 
 @dataclasses.dataclass

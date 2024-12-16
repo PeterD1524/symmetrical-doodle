@@ -157,11 +157,7 @@ async def scrcpy(
             except UnicodeDecodeError:
                 pass
 
-        app = pyside_screens.App(
-            thread,
-            size=(server.info.frame_size.width, server.info.frame_size.height),
-            window_title=window_title,
-        )
+        app = pyside_screens.App(thread, window_title=window_title)
 
         decoder.sinks.append(app.screen.frame_receiver.frame_sink)
         screen_frame_receiver_coro = app.screen.frame_receiver.run()
