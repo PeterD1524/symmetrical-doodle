@@ -9,6 +9,11 @@ dependencies = [
     "numpy>=2.2.0",
 ]
 
+[project.optional-dependencies]
+pyside = [
+    "pyside6>=6.8.1",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
