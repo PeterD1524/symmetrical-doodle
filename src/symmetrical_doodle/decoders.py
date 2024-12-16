@@ -35,7 +35,6 @@ class Decoder:
         while True:
             item = await self.packet_sink.get()
             if isinstance(item, symmetrical_doodle.packets.VideoCodecContext):
-                print(item)
                 self.codec_context = item.create_av_codec_context()
             else:
                 await self.push(item)
