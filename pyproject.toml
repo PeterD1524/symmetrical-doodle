@@ -1,20 +1,22 @@
-[tool.poetry]
+[project]
 name = "symmetrical-doodle"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-av = "^14.0.1"
-numpy = "^2.2.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-yapf = "^0.43.0"
-toml = "^0.10.2"
-flake8 = "^7.1.1"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "av>=14.0.1",
+    "numpy>=2.2.0",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "flake8>=7.1.1",
+    "pytest>=8.3.4",
+    "toml>=0.10.2",
+    "yapf>=0.43.0",
+]
