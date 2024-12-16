@@ -6,14 +6,14 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-av = "^9.1.1"
-numpy = "^1.22.3"
+av = "^14.0.1"
+numpy = "^2.2.0"
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.1.1"
-yapf = "^0.32.0"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+yapf = "^0.43.0"
 toml = "^0.10.2"
-flake8 = "^4.0.1"
+flake8 = "^7.1.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
