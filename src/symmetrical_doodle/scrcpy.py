@@ -22,6 +22,7 @@ import symmetrical_doodle.utils.common
 
 def get_pyside_screens():
     import symmetrical_doodle.screens.pyside_screens
+
     return symmetrical_doodle.screens.pyside_screens
 
 
@@ -48,15 +49,12 @@ async def scrcpy(
     crop: Optional[str] = None,
     codec_options: Optional[str] = None,
     encoder_name: Optional[str] = None,
-    log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.
-    options.LogLevel.INFO,
+    log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.options.LogLevel.INFO,
     port: Optional[int] = None,
     max_size: int = 0,
     bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE,
     max_fps: int = 0,
-    lock_video_orientation: symmetrical_doodle.options.
-    LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.
-    UNLOCKED,
+    lock_video_orientation: symmetrical_doodle.options.LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.UNLOCKED,
     display_id: int = 0,
     show_touches: bool = False,
     control: bool = True,
@@ -69,7 +67,7 @@ async def scrcpy(
     cleanup: bool = True,
     device_server_path: str = symmetrical_doodle.servers.DEVICE_SERVER_PATH,
     version: str = symmetrical_doodle.config.SCRCPY_VERSION,
-    device_socket_name: str = symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME
+    device_socket_name: str = symmetrical_doodle.adb_tunnel.DEVICE_SOCKET_NAME,
 ):
     if display:
         pyside_screens = get_pyside_screens()
@@ -97,7 +95,7 @@ async def scrcpy(
         cleanup=cleanup,
         server_path=pathlib.Path(server_path),
         device_server_path=device_server_path,
-        version=version
+        version=version,
     )
 
     adb = symmetrical_doodle.adb.ADB()
@@ -106,7 +104,7 @@ async def scrcpy(
         serial=serial,
         tcpip_dst=tcpip_dst,
         select_usb=select_usb,
-        select_tcpip=select_tcpip
+        select_tcpip=select_tcpip,
     )
 
     tunnel = symmetrical_doodle.adb_tunnel.Tunnel(adb, device_socket_name)
@@ -162,23 +160,19 @@ async def scrcpy(
         app = pyside_screens.App(
             thread,
             size=(server.info.frame_size.width, server.info.frame_size.height),
-            window_title=window_title
+            window_title=window_title,
         )
 
         decoder.sinks.append(app.screen.frame_receiver.frame_sink)
         screen_frame_receiver_coro = app.screen.frame_receiver.run()
         coros.append(screen_frame_receiver_coro)
 
-        futures = [
-            asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros
-        ]
+        futures = [asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros]
 
         r = app.run()
     else:
 
-        futures = [
-            asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros
-        ]
+        futures = [asyncio.run_coroutine_threadsafe(coro, loop) for coro in coros]
 
     # cancel all tasks
     event = asyncio.Event()
@@ -208,8 +202,8 @@ async def main():
     options = symmetrical_doodle.cli.parse_args()
 
     logging.basicConfig(
-        format='%(levelname)s: %(message)s',
-        level=options.log_level.to_python_logging_level()
+        format="%(levelname)s: %(message)s",
+        level=options.log_level.to_python_logging_level(),
     )
 
     await scrcpy(
@@ -241,9 +235,9 @@ async def main():
         power_off_on_close=options.power_off_on_close,
         clipboard_autosync=options.clipboard_autosync,
         downsize_on_error=options.downsize_on_error,
-        cleanup=options.cleanup
+        cleanup=options.cleanup,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

@@ -12,8 +12,8 @@ CONTROL_MSG_MAX_SIZE = 1 << 18
 CONTROL_MSG_INJECT_TEXT_MAX_LENGTH = 300
 CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH = CONTROL_MSG_MAX_SIZE - 14
 
-POINTER_ID_MOUSE = 0xffffffffffffffff
-POINTER_ID_VIRTUAL_FINGER = 0xfffffffffffffffe
+POINTER_ID_MOUSE = 0xFFFFFFFFFFFFFFFF
+POINTER_ID_VIRTUAL_FINGER = 0xFFFFFFFFFFFFFFFE
 
 
 class ControlMessageType(enum.Enum):
@@ -43,9 +43,7 @@ class CopyKey(enum.Enum):
     CUT = enum.auto()
 
 
-def write_position(
-    buf: bytearray, position: symmetrical_doodle.coords.Position
-):
+def write_position(buf: bytearray, position: symmetrical_doodle.coords.Position):
     symmetrical_doodle.utils.buffer.write32be(buf, position.point.x)
     symmetrical_doodle.utils.buffer.write32be(buf, position.point.y)
     symmetrical_doodle.utils.buffer.write16be(buf, position.screen_size.width)
@@ -53,9 +51,7 @@ def write_position(
 
 
 def write_string(buf: bytearray, utf8: bytes, max_len: int):
-    length = symmetrical_doodle.utils.str.str_utf8_truncation_index(
-        utf8, max_len
-    )
+    length = symmetrical_doodle.utils.str.str_utf8_truncation_index(utf8, max_len)
     symmetrical_doodle.utils.buffer.write32be(buf, length)
     buf.extend(utf8[:length])
 
@@ -63,9 +59,9 @@ def write_string(buf: bytearray, utf8: bytes, max_len: int):
 def to_fixed_point_16(f: float):
     assert 0.0 <= f <= 1.0
     u = int(f * 65536.0)
-    if u >= 0xffff:
-        u = 0xffff
-    return u & 0xffff
+    if u >= 0xFFFF:
+        u = 0xFFFF
+    return u & 0xFFFF
 
 
 @dataclasses.dataclass

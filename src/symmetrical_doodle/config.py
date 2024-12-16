@@ -1,4 +1,4 @@
-SCRCPY_VERSION = '1.23'
+SCRCPY_VERSION = "3.0"
 """the version, updated on release"""
 
 DEFAULT_LOCAL_PORT_RANGE = (27183, 27199)

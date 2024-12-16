@@ -11,15 +11,12 @@ class Receiver:
     async def run(self):
         reader, _ = self.control_connection
 
-        buf = b''
+        buf = b""
 
         while True:
-            assert len(
-                buf
-            ) < symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE
+            assert len(buf) < symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE
             data = await reader.read(
-                symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE -
-                len(buf)
+                symmetrical_doodle.device_message.DEVICE_MSG_MAX_SIZE - len(buf)
             )
             if not data:
                 break
@@ -46,7 +43,5 @@ class Receiver:
             if start == len(buf):
                 return start
 
-    def process_message(
-        self, message: symmetrical_doodle.device_message.DeviceMessage
-    ):
+    def process_message(self, message: symmetrical_doodle.device_message.DeviceMessage):
         pass

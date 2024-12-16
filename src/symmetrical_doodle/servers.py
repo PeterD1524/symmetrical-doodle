@@ -14,7 +14,7 @@ import symmetrical_doodle.utils.conection
 
 logger = logging.getLogger(__name__)
 
-DEVICE_SERVER_PATH = '/data/local/tmp/scrcpy-server.jar'
+DEVICE_SERVER_PATH = "/data/local/tmp/scrcpy-server.jar"
 
 DEVICE_NAME_FIELD_LENGTH = 64
 
@@ -25,14 +25,11 @@ def create_server_params(
     codec_options: Optional[str] = None,
     encoder_name: Optional[str] = None,
     port: Optional[int] = None,
-    log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.
-    options.LogLevel.INFO,
+    log_level: symmetrical_doodle.options.LogLevel = symmetrical_doodle.options.LogLevel.INFO,
     max_size: int = 0,
     bit_rate: int = symmetrical_doodle.config.DEFAULT_BIT_RATE,
     max_fps: int = 0,
-    lock_video_orientation: symmetrical_doodle.options.
-    LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.
-    UNLOCKED,
+    lock_video_orientation: symmetrical_doodle.options.LockVideoOrientation = symmetrical_doodle.options.LockVideoOrientation.UNLOCKED,
     display_id: int = 0,
     show_touches: bool = False,
     control: bool = True,
@@ -43,7 +40,7 @@ def create_server_params(
     downsize_on_error: bool = True,
     cleanup: bool = True,
     device_server_path: str = DEVICE_SERVER_PATH,
-    version: str = symmetrical_doodle.config.SCRCPY_VERSION
+    version: str = symmetrical_doodle.config.SCRCPY_VERSION,
 ):
     return ServerParams(
         log_level=log_level,
@@ -66,7 +63,7 @@ def create_server_params(
         cleanup=cleanup,
         server_path=pathlib.Path(server_path),
         device_server_path=device_server_path,
-        version=version
+        version=version,
     )
 
 
@@ -90,17 +87,15 @@ async def read_device_info(
 ):
     reader, _ = device_connection
     data = await reader.readexactly(DEVICE_NAME_FIELD_LENGTH + 4)
-    device_name = data[:DEVICE_NAME_FIELD_LENGTH - 1]
-    end = device_name.find(b'\x00')
+    device_name = data[: DEVICE_NAME_FIELD_LENGTH - 1]
+    end = device_name.find(b"\x00")
     if end != -1:
         device_name = device_name[:end]
-    width = (data[DEVICE_NAME_FIELD_LENGTH] <<
-             8) | data[DEVICE_NAME_FIELD_LENGTH + 1]
-    height = (data[DEVICE_NAME_FIELD_LENGTH + 2] <<
-              8) | data[DEVICE_NAME_FIELD_LENGTH + 3]
-    return ServerInfo(
-        device_name, symmetrical_doodle.coords.Size(width, height)
-    )
+    width = (data[DEVICE_NAME_FIELD_LENGTH] << 8) | data[DEVICE_NAME_FIELD_LENGTH + 1]
+    height = (data[DEVICE_NAME_FIELD_LENGTH + 2] << 8) | data[
+        DEVICE_NAME_FIELD_LENGTH + 3
+    ]
+    return ServerInfo(device_name, symmetrical_doodle.coords.Size(width, height))
 
 
 @dataclasses.dataclass
@@ -139,71 +134,75 @@ class Server:
 
     tunnel: symmetrical_doodle.adb_tunnel.Tunnel
 
-    process: Optional[asyncio.subprocess.Process
-                      ] = dataclasses.field(default=None, init=False)
+    process: Optional[asyncio.subprocess.Process] = dataclasses.field(
+        default=None, init=False
+    )
 
-    video_connection: Optional[tuple[asyncio.StreamReader,
-                                     asyncio.StreamWriter]
-                               ] = dataclasses.field(default=None, init=False)
-    control_connection: Optional[tuple[
-        asyncio.StreamReader,
-        asyncio.StreamWriter]] = dataclasses.field(default=None, init=False)
+    video_connection: Optional[tuple[asyncio.StreamReader, asyncio.StreamWriter]] = (
+        dataclasses.field(default=None, init=False)
+    )
+    control_connection: Optional[tuple[asyncio.StreamReader, asyncio.StreamWriter]] = (
+        dataclasses.field(default=None, init=False)
+    )
 
     def execute(self):
         command = [
-            'shell',
-            f'CLASSPATH={self.params.device_server_path}',
-            'app_process',
-            '/',
-            'com.genymobile.scrcpy.Server',
+            "shell",
+            f"CLASSPATH={self.params.device_server_path}",
+            "app_process",
+            "/",
+            "com.genymobile.scrcpy.Server",
             self.params.version,
         ]
 
-        command.append(f'log_level={self.params.log_level.to_server_string()}')
-        command.append(f'bit_rate={self.params.bit_rate}')
+        command.append(f"log_level={self.params.log_level.to_server_string()}")
+        command.append(f"bit_rate={self.params.bit_rate}")
 
         if self.params.max_size:
-            command.append(f'max_size={self.params.max_size}')
+            command.append(f"max_size={self.params.max_size}")
         if self.params.max_fps:
-            command.append(f'max_fps={self.params.max_fps}')
-        if self.params.lock_video_orientation != symmetrical_doodle.options.LockVideoOrientation.UNLOCKED:
+            command.append(f"max_fps={self.params.max_fps}")
+        if (
+            self.params.lock_video_orientation
+            != symmetrical_doodle.options.LockVideoOrientation.UNLOCKED
+        ):
             command.append(
-                f'lock_video_orientation={self.params.lock_video_orientation}'
+                f"lock_video_orientation={self.params.lock_video_orientation}"
             )
         if self.tunnel.forward:
-            command.append('tunnel_forward=true')
+            command.append("tunnel_forward=true")
         if self.params.crop is not None:
-            command.append(f'crop={self.params.crop}')
+            command.append(f"crop={self.params.crop}")
         if not self.params.control:
             # By default, control is true
-            command.append('control=false')
+            command.append("control=false")
         if self.params.display_id:
-            command.append(f'display_id={self.params.display_id}')
+            command.append(f"display_id={self.params.display_id}")
         if self.params.show_touches:
-            command.append('show_touches=true')
+            command.append("show_touches=true")
         if self.params.stay_awake:
-            command.append('stay_awake=true')
+            command.append("stay_awake=true")
         if self.params.codec_options is not None:
-            command.append(f'codec_options={self.params.codec_options}')
+            command.append(f"codec_options={self.params.codec_options}")
         if self.params.encoder_name is not None:
-            command.append(f'encoder_name={self.params.encoder_name}')
+            command.append(f"encoder_name={self.params.encoder_name}")
         if self.params.power_off_on_close:
-            command.append('power_off_on_close=true')
+            command.append("power_off_on_close=true")
         if not self.params.clipboard_autosync:
             # By default, clipboard_autosync is true
-            command.append('clipboard_autosync=false')
+            command.append("clipboard_autosync=false")
         if not self.params.downsize_on_error:
             # By default, downsize_on_error is true
-            command.append('downsize_on_error=false')
+            command.append("downsize_on_error=false")
         if not self.params.cleanup:
             # By default, cleanup is true
-            command.append('cleanup=false')
+            command.append("cleanup=false")
 
         return self.adb.run_command(command)
 
     async def connect(self):
         if self.tunnel.forward:
-            host = '127.0.0.1'
+            host = "127.0.0.1"
             port = self.tunnel.local_port
 
             self.video_connection = await retry_connect(100, 0.1, host, port)
@@ -260,17 +259,15 @@ class Server:
                 # After this delay, kill the server if it's not dead already.
                 # On some devices, closing the sockets is not sufficient to
                 # wake up the blocking calls while the device is asleep.
-                logger.warning('Killing the server...')
+                logger.warning("Killing the server...")
                 self.process.kill()
 
 
 async def retry_connect(attempts: int, delay: float, host, port):
     while attempts > 0:
-        logger.debug('Remaining connection attempts: %s', attempts)
+        logger.debug("Remaining connection attempts: %s", attempts)
         try:
-            reader, writer = await asyncio.open_connection(
-                host=host, port=port
-            )
+            reader, writer = await asyncio.open_connection(host=host, port=port)
         except ConnectionRefusedError:
             pass
         else:

@@ -8,15 +8,15 @@ import symmetrical_doodle.packets
 
 @dataclasses.dataclass
 class Decoder:
-    packet_sink: asyncio.Queue[
-        symmetrical_doodle.packets.Packet
-    ] = dataclasses.field(default_factory=asyncio.Queue, init=False)
-    sinks: list[asyncio.Queue[av.VideoFrame]
-                ] = dataclasses.field(default_factory=list, init=False)
+    packet_sink: asyncio.Queue[symmetrical_doodle.packets.Packet] = dataclasses.field(
+        default_factory=asyncio.Queue, init=False
+    )
+    sinks: list[asyncio.Queue[av.VideoFrame]] = dataclasses.field(
+        default_factory=list, init=False
+    )
 
     codec_context: av.CodecContext = dataclasses.field(
-        default_factory=lambda: av.CodecContext.create('h264', 'r'),
-        init=False
+        default_factory=lambda: av.CodecContext.create("h264", "r"), init=False
     )
 
     async def push(self, packet: symmetrical_doodle.packets.Packet):

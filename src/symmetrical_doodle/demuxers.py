@@ -16,8 +16,9 @@ PACKET_PTS_MASK = PACKET_FLAG_KEY_FRAME - 1
 class Demuxer:
     connection: tuple[asyncio.StreamReader, asyncio.StreamWriter]
 
-    sinks: list[asyncio.Queue[symmetrical_doodle.packets.Packet]
-                ] = dataclasses.field(default_factory=list, init=False)
+    sinks: list[asyncio.Queue[symmetrical_doodle.packets.Packet]] = dataclasses.field(
+        default_factory=list, init=False
+    )
 
     pending: symmetrical_doodle.packets.Packet = dataclasses.field(
         default=None, init=False
@@ -33,9 +34,7 @@ class Demuxer:
         header = await reader.readexactly(PACKET_HEADER_SIZE)
 
         start = 0
-        pts_flags, start = symmetrical_doodle.utils.buffer.read64be(
-            header, start
-        )
+        pts_flags, start = symmetrical_doodle.utils.buffer.read64be(header, start)
         length, start = symmetrical_doodle.utils.buffer.read32be(header, start)
         assert length
 
@@ -73,8 +72,6 @@ class Demuxer:
         if not is_config:
             self.pending = None
 
-    async def push_packet_to_sinks(
-        self, packet: symmetrical_doodle.packets.Packet
-    ):
+    async def push_packet_to_sinks(self, packet: symmetrical_doodle.packets.Packet):
         for sink in self.sinks:
             await sink.put(packet)
