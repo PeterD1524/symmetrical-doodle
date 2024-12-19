@@ -36,6 +36,9 @@ jobs:
       - name: Format check
         run: |
           uv run black --check --diff .
+      - name: Type check
+        run: |
+          uv run pyright .
       - name: Test with pytest
         run: |
           uv run pytest
