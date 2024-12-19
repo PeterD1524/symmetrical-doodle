@@ -103,7 +103,7 @@ class ServerParams:
     max_size: int
     video_bit_rate: int
     max_fps: int
-    lock_video_orientation: int
+    lock_video_orientation: symmetrical_doodle.options.LockVideoOrientation
     control: bool
     display_id: int
     show_touches: bool
@@ -160,10 +160,10 @@ class Server:
             command.append(f"max_fps={self.params.max_fps}")
         if (
             self.params.lock_video_orientation
-            != symmetrical_doodle.options.LockVideoOrientation.UNLOCKED
+            is not symmetrical_doodle.options.LockVideoOrientation.UNLOCKED
         ):
             command.append(
-                f"lock_video_orientation={self.params.lock_video_orientation}"
+                f"lock_video_orientation={self.params.lock_video_orientation.value}"
             )
         if self.tunnel.forward:
             command.append("tunnel_forward=true")
@@ -270,7 +270,8 @@ async def retry_connect(attempts: int, delay: float, host, port):
             try:
                 await reader.readexactly(1)
             except asyncio.IncompleteReadError:
-                symmetrical_doodle
+                writer.close()
+                await writer.wait_closed()
             else:
                 return reader, writer
 

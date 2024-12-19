@@ -13,6 +13,9 @@ dependencies = [
 pyside = [
     "pyside6>=6.8.1",
 ]
+cv2 = [
+    "opencv-contrib-python>=4.10.0.84",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -22,6 +25,7 @@ build-backend = "hatchling.build"
 dev = [
     "black>=24.10.0",
     "flake8>=7.1.1",
+    "pyright>=1.1.391",
     "pytest>=8.3.4",
     "toml>=0.10.2",
 ]

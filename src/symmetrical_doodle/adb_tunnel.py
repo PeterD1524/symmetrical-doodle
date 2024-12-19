@@ -93,7 +93,9 @@ class Tunnel:
             process = await self.adb.reverse_remove(
                 f"localabstract:{self.device_socket_name}"
             )
-            self.server.close()
+            server = self.server
+            assert server is not None
+            server.close()
             await self.close_connections()
 
     async def close_connections(self):
@@ -104,4 +106,4 @@ class Tunnel:
                 connection = connections.get_nowait()
             except asyncio.QueueEmpty:
                 break
-            symmetrical_doodle.utils.conection.close_connection(connection)
+            await symmetrical_doodle.utils.conection.close_connection(connection)

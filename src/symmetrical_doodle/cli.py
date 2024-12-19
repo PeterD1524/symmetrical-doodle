@@ -3,6 +3,7 @@ from typing import Optional
 
 import symmetrical_doodle.config
 import symmetrical_doodle.options
+import symmetrical_doodle.utils.internal
 import symmetrical_doodle.utils.str
 
 
@@ -64,11 +65,11 @@ def parse_window_position(s: str):
     value = int(s, base=0)
     if value == symmetrical_doodle.options.WINDOW_POSITION_UNDEFINED:
         raise ValueError
-    return ValueError
+    return value
 
 
 def parse_shortcut_mods_item(s: str):
-    item = 0
+    item = symmetrical_doodle.options.ShortcutMod(0)
     for mod in s.split("+"):
         if mod == "lctrl":
             item |= symmetrical_doodle.options.ShortcutMod.LCTRL
@@ -106,7 +107,7 @@ def guess_record_format(filename: str):
 
 
 def get_parser():
-    options_default = symmetrical_doodle.options.Options(None)
+    options_default = symmetrical_doodle.options.Options("")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--always-on-top",
@@ -325,7 +326,7 @@ def get_parser():
     parser.add_argument(
         "--shortcut-mod",
         default=",".join(
-            shortcut_mod.name.lower()
+            symmetrical_doodle.utils.internal.assert_not_none(shortcut_mod.name).lower()
             for shortcut_mod in options_default.shortcut_mods.data
         ),
         help='Specify the modifiers to use for scrcpy shortcuts. Possible keys are "lctrl", "rctrl", "lalt", "ralt", "lsuper" and "rsuper". A shortcut can consist in several keys, separated by \'+\'. Several shortcuts can be specified, separated by \',\'. For example, to use either LCtrl+LAlt or LSuper for scrcpy shortcuts, pass "lctrl+lalt,lsuper". Default is "%(default)s" (left-Alt or left-Super).',

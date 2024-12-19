@@ -55,7 +55,7 @@ class Demuxer:
         ]
     ] = dataclasses.field(default_factory=list, init=False)
 
-    pending: symmetrical_doodle.packets.Packet = dataclasses.field(
+    pending: symmetrical_doodle.packets.Packet | None = dataclasses.field(
         default=None, init=False
     )
 

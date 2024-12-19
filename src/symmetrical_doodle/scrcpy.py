@@ -125,9 +125,9 @@ async def scrcpy(
     coros = []
 
     if control:
-        controller = symmetrical_doodle.controllers.Controller(
-            server.control_connection
-        )
+        control_connection = server.control_connection
+        assert control_connection is not None
+        controller = symmetrical_doodle.controllers.Controller(control_connection)
         if turn_screen_off:
             asyncio.run_coroutine_threadsafe(
                 symmetrical_doodle.utils.common.turn_screen_off(controller), loop
@@ -136,7 +136,9 @@ async def scrcpy(
         control_coro = controller.run()
         coros.append(control_coro)
 
-    demuxer = symmetrical_doodle.demuxers.Demuxer(server.video_connection)
+    video_connection = server.video_connection
+    assert video_connection is not None
+    demuxer = symmetrical_doodle.demuxers.Demuxer(video_connection)
 
     decoder = symmetrical_doodle.decoders.Decoder()
 
@@ -153,7 +155,9 @@ async def scrcpy(
 
         if window_title is None:
             try:
-                window_title = server.info.device_name.decode()
+                info = server.info
+                assert info is not None
+                window_title = info.device_name.decode()
             except UnicodeDecodeError:
                 pass
 
