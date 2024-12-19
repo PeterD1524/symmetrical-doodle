@@ -15,7 +15,9 @@ class Decoder:
         default_factory=list, init=False
     )
 
-    codec_context: av.CodecContext | None = dataclasses.field(default=None, init=False)
+    codec_context: av.VideoCodecContext | None = dataclasses.field(
+        default=None, init=False
+    )
 
     async def push(self, packet: symmetrical_doodle.packets.Packet):
         is_config = packet.pts is None

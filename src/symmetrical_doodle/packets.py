@@ -37,6 +37,7 @@ class VideoCodecContext:
 
     def create_av_codec_context(self):
         context = av.codec.context.CodecContext.create(self.codec)
+        assert isinstance(context, av.VideoCodecContext)
         context.flags |= self.flags
         context.width = self.width
         context.height = self.height

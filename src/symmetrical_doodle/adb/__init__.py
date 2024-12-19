@@ -13,7 +13,7 @@ def get_executable():
 
 @dataclasses.dataclass
 class CompletedProcess:
-    returncode: int
+    returncode: int | None
     program: str
     args: list[str]
     stdout: Optional[bytes]
@@ -236,13 +236,13 @@ class ADB(SimpleADB):
         self.use_usb_device(False)
         self.use_tcpip_device(False)
         del self.serial
-        value = str(value)
+        v = str(value)
         try:
             index = self.global_options.index("-t")
         except ValueError:
-            self.global_options.extend(["-t", value])
+            self.global_options.extend(["-t", v])
             return
-        self.global_options[index + 1] = value
+        self.global_options[index + 1] = v
 
     @transport_id.deleter
     def transport_id(self):

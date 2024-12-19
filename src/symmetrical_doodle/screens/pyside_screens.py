@@ -46,33 +46,35 @@ class PySideScreen(PySide6.QtWidgets.QWidget):
 
         super().__init__()
 
-        self.thread = thread
         self.pixmap = PySide6.QtGui.QPixmap()
         self.label = PySide6.QtWidgets.QLabel()
 
-        self.frame_receiver = FrameReceiver(self.thread.image_received)
+        self.frame_receiver = FrameReceiver(thread.image_received)
 
         self.label.setPixmap(self.pixmap)
         self.label.setScaledContents(True)
 
-        self.layout = PySide6.QtWidgets.QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.addWidget(self.label)
+        layout = PySide6.QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
 
-        self.thread.image_received.connect(self.update_image)
+        thread.image_received.connect(self.update_image)
 
         self.device_screen_size = size
 
         if window_title is not None:
             self.setWindowTitle(window_title)
 
-    @PySide6.QtCore.Slot(numpy.ndarray)
-    def update_image(self, image: numpy.ndarray):
+    @PySide6.QtCore.Slot(numpy.ndarray)  # type: ignore https://bugreports.qt.io/browse/PYSIDE-2942
+    def update_image(
+        self, image: numpy.ndarray[tuple[int, int, int], numpy.dtype[numpy.uint8]]
+    ):
         height, width = image.shape[:2]
 
         self.pixmap.convertFromImage(
             PySide6.QtGui.QImage(
-                image, width, height, PySide6.QtGui.QImage.Format_RGB888
+                image.data, width, height, PySide6.QtGui.QImage.Format.Format_RGB888
             )
         )
         self.label.setPixmap(self.pixmap)
